@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Navbar from "@/ui/Navbar";
 
 type Game = {
   gameID: number;
@@ -37,39 +37,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 bg-[#152030]">
-        {/* Logo */}
-        <div className="flex items-center space-x-2 bg-[#0E1116] px-4 py-2 rounded-xl">
-          <span className="text-xl">🔑</span>
-          <span className="font-bold">KianaStore Key</span>
-        </div>
+      <Navbar /> {/* ✅ Navbar selalu ada */}
 
-        {/* Search Bar */}
-        <div className="flex-1 flex justify-center px-6">
-          <input
-            type="text"
-            placeholder="Search Games"
-            className="w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex space-x-2">
-          <Link href="/register">
-            <button className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-              Create account
-            </button>
-          </Link>
-          <Link href="/login">
-            <button className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-              Login
-            </button>
-          </Link>
-        </div>
-      </nav>
-
-      {/* Content */}
       <main className="p-6 bg-[#152030] mt-4 mx-6 rounded-md">
         {loading ? (
           <p className="text-center text-gray-300">Loading games...</p>

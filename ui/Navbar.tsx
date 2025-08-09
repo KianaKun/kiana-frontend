@@ -6,61 +6,78 @@ import { usePathname } from "next/navigation";
 
 type User = {
   id: number;
-  name: string;
+  email: string;
   role: "admin" | "user";
 } | null;
 
-// ganti ke "/api/auth/me" jika pakai proxy Next.js
 const AUTH_BASE = "http://localhost:5000";
 
-export default function Navbar() {
+export default function Navbars() {
   const pathname = usePathname();
   const [user, setUser] = useState<User>(null);
-  const { qty } = useCart?.() ?? { qty: 0 }; // aman kalau belum ada CartProvider
+  const { qty } = useCart?.() ?? { qty: 0 }; // Aman kalau belum ada CartProvider
 
+  // Cek session dari backend
   const recheck = useCallback(() => {
-    fetch(`${AUTH_BASE}/auth/me`, { credentials: "include", cache: "no-store" })
+    fetch(`${AUTH_BASE}/me`, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
-      .then((u) => setUser(u ?? null))
+      .then((data) => {
+        if (!data.loggedIn) {
+          setUser(null);
+          return;
+        }
+        // Convert "customer" ke "user" biar konsisten
+        const mappedRole = data.user.role === "customer" ? "user" : data.user.role;
+        setUser({ ...data.user, role: mappedRole });
+      })
       .catch(() => setUser(null));
   }, []);
 
-  useEffect(() => { recheck(); }, [recheck, pathname]);     // recheck saat route berubah
-  useEffect(() => {                                         // recheck saat tab fokus
+  useEffect(() => {
+    recheck();
+  }, [recheck, pathname]);
+
+  useEffect(() => {
     window.addEventListener("focus", recheck);
     return () => window.removeEventListener("focus", recheck);
   }, [recheck]);
 
+  // Logout handler
   async function handleLogout() {
     try {
-      await fetch(`${AUTH_BASE}/auth/logout`, {
+      await fetch(`${AUTH_BASE}/logout`, {
         method: "POST",
         credentials: "include",
       });
-    } finally {
       setUser(null);
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Logout error", err);
     }
   }
 
   return (
     <nav className="flex items-center justify-between px-6 py-4 bg-[#152030]">
       {/* Logo */}
-      <div className="flex items-center space-x-2 bg-[#0E1116] px-4 py-2 rounded-xl">
+      <div className="flex items-center space-x-2 bg-[#0E1116] px-4 py-2 rounded-xl text-white">
         <span className="text-xl">🔑</span>
         <span className="font-bold">KianaStore Key</span>
       </div>
 
-      {/* Search */}
-      <div className="flex-1 flex justify-center px-6">
-        <input
-          type="text"
-          placeholder="Search Games"
-          className="w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+        {/* Right side */}
+      {user?.role !== "admin" && (
+        <div className="flex-1 flex justify-center px-6">
+          <input
+            type="text"
+            placeholder="Search Games"
+            className="w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
 
       {/* Right side */}
       <div className="flex items-center gap-2">
+        {/* Belum login */}
         {!user && (
           <>
             <Link href="/register">
@@ -76,6 +93,7 @@ export default function Navbar() {
           </>
         )}
 
+        {/* User login */}
         {user?.role === "user" && (
           <>
             <Link href="/cart" className="relative">
@@ -97,6 +115,7 @@ export default function Navbar() {
           </>
         )}
 
+        {/* Admin login */}
         {user?.role === "admin" && (
           <button
             onClick={handleLogout}
@@ -105,11 +124,16 @@ export default function Navbar() {
             Logout
           </button>
         )}
+
+        {/* Search */}
+
+
       </div>
     </nav>
   );
 }
-function useCart(): { qty: any; } {
-    throw new Error("Function not implemented.");
-}
 
+// Dummy hook biar tidak error saat belum ada CartProvider
+function useCart(): { qty: number } {
+  return { qty: 0 };
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import AdminRoute from "@/components/AdminRoute";
 import AdminShell from "@/components/AdminShell";
 import { API, fetchJSON } from "@/components/Api";
+import Navbar from "@/ui/Navbar";
 
 type Order = {
   orderID: number;
@@ -41,6 +42,7 @@ export default function ManageOrderPage() {
 
   return (
     <AdminRoute>
+      <Navbar />
       <AdminShell>
         <div className="bg-[#152030] p-4 rounded-md">
           <h2 className="mb-3 font-medium">Orders</h2>

@@ -8,6 +8,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import GameForm, { GameFormValues } from "@/components/games/GameForm";
 import GamePicker from "@/components/games/GamePicker";
 import GameCardsPreview, { Game as GameFull } from "@/components/games/GameCardsPreview";
+import Navbar from "@/ui/Navbar";
 
 type Mode = "idle" | "add" | "edit" | "delete";
 
@@ -106,6 +107,7 @@ export default function ManageGamesPage() {
 
   return (
     <AdminRoute>
+      <Navbar />
       <AdminShell>
         <div className="bg-[#152030] p-4 rounded-md mb-4">
           <h2 className="mb-3 font-medium">Manage Games</h2>

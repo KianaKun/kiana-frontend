@@ -4,6 +4,7 @@ import AdminRoute from "@/components/AdminRoute";
 import AdminShell from "@/components/AdminShell";
 import { useEffect, useState } from "react";
 import { API, fetchJSON } from "@/components/Api";
+import Navbar from "@/ui/Navbar";
 
 type AdminStats = {
   totalPurchase: number;
@@ -23,6 +24,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminRoute>
+      <Navbar />
       <AdminShell>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-[#152030] rounded-md p-4">

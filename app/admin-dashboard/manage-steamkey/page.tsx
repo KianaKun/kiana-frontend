@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import AdminRoute from "@/components/AdminRoute";
 import AdminShell from "@/components/AdminShell";
 import { API, fetchJSON } from "@/components/Api";
+import Navbar from "@/ui/Navbar";
 
 type Game = { gameID: number; title: string };
 type SteamKey = {
@@ -65,6 +66,7 @@ export default function ManageSteamkeyPage() {
 
   return (
     <AdminRoute>
+      <Navbar />
       <AdminShell>
         {/* Add Steamkey Form */}
         <div className="bg-[#152030] p-4 rounded-md">
