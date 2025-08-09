@@ -18,26 +18,30 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Sidebar */}
       <aside className="w-64 bg-[#152030] flex flex-col items-center py-6 space-y-4">
 
-        {items.map((it) => {
-          const active = pathname === it.href || pathname.startsWith(it.href + "/");
-          return (
-            <Link
-              key={it.href}
-              href={it.href}
-              prefetch={false}
-              className={`w-40 text-center py-2 rounded-full transition
-                ${active ? "bg-[#30506a]" : "bg-[#274056] hover:bg-[#30506a]"}`}
-            >
-              {it.label}
-            </Link>
-          );
-        })}
+    {items.map((it) => {
+      const active =
+        pathname === it.href ||
+        (it.href !== "/admin-dashboard" && pathname.startsWith(it.href + "/"));
+
+      return (
+        <Link
+          key={it.href}
+          href={it.href}
+          prefetch={false}
+          className={`w-40 text-center py-2 rounded-full transition ${
+            active
+              ? "bg-white text-black font-semibold"
+              : "bg-[#274056] text-white hover:bg-[#30506a]"
+          }`}
+        >
+          {it.label}
+        </Link>
+      );
+    })}
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-6">
-        {children}
-      </main>
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }
