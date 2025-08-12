@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/ui/Navbar";
+import Link from "next/link";
 
 type Game = {
   gameID: number;
@@ -48,17 +49,19 @@ export default function HomePage() {
               <p className="text-center text-gray-300 col-span-full">No games available.</p>
             ) : (
               games.map((game) => (
-                <div key={game.gameID} className="bg-transparent">
-                  <div className="w-full h-48 bg-[#0E1116] rounded-lg flex items-center justify-center overflow-hidden">
-                    <img
-                      src={resolveImg(game.image_url)}
-                      alt={game.title}
-                      className="object-cover w-full h-full rounded-lg"
-                      loading="lazy"
-                    />
+                <Link key={game.gameID} href={`/product/${game.gameID}`}>
+                  <div className="bg-transparent cursor-pointer hover:scale-105 transition-transform">
+                    <div className="w-full h-48 bg-[#0E1116] rounded-lg flex items-center justify-center overflow-hidden">
+                      <img
+                        src={resolveImg(game.image_url)}
+                        alt={game.title}
+                        className="object-cover w-full h-full rounded-lg"
+                        loading="lazy"
+                      />
+                    </div>
+                    <p className="mt-2 text-center">{game.title}</p>
                   </div>
-                  <p className="mt-2 text-center">{game.title}</p>
-                </div>
+                </Link>
               ))
             )}
           </div>

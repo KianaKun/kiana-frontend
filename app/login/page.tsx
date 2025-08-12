@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Navbars from "@/ui/Navbar";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
