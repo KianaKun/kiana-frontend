@@ -7,7 +7,8 @@ import { API, fetchJSON } from "@/components/Api";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import GameForm, { GameFormValues } from "@/components/games/GameForm";
 import GamePicker from "@/components/games/GamePicker";
-import GameCardsPreview, { Game as GameFull } from "@/components/games/GameCardsPreview";
+import GameCardsPreview from "@/components/games/GameCardsPreview";
+import type { Game as GameFull } from "@/components/games/types";
 import Navbar from "@/ui/Navbar";
 
 type Mode = "idle" | "add" | "edit" | "delete";

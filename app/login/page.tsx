@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Navbars from "@/ui/Navbar";
+
+const BACKEND =
+  (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/+$/, "");
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -10,11 +12,11 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch("http://localhost:5000/login", {
+      const res = await fetch(`${BACKEND}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -55,8 +57,7 @@ export default function LoginPage() {
         />
         <button
           onClick={handleLogin}
-          className="bg-[#0E1116] text-white px-4 py-2 rounded-full hover:bg-[#1c2027]"
-        >
+          className="bg-[#0E1116] text-white px-4 py-2 rounded-full hover:bg-[#1c2027]">
           Login
         </button>
         {message && <p className="mt-4 text-white">{message}</p>}
