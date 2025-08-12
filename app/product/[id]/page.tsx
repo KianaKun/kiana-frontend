@@ -24,6 +24,7 @@ export default function ProductPage() {
   const router = useRouter();
   const [game, setGame] = useState<GameDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addedToast, setAddedToast] = useState(false);
 
   useEffect(() => {
     // 🔹 1. Cek login status
@@ -55,7 +56,32 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
       <Navbar />
+      {/* Toast success – muncul di bawah tengah */}
+{addedToast && (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="relative flex items-center gap-3 bg-[#12202f]/95 border border-white/10 rounded-full px-4 py-2 shadow-xl">
+            {/* Badge hijau beranimasi */}
+            <span className="relative inline-flex">
+              <span className="absolute inline-flex h-7 w-7 rounded-full bg-emerald-500 opacity-60 animate-ping"></span>
+              <span className="relative inline-flex items-center justify-center h-7 w-7 rounded-full bg-emerald-500">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </span>
+            </span>
 
+            <span className="font-medium">Item added to cart</span>
+          </div>
+        </div>
+      )}
       <main className="p-6 mt-4 mx-6 rounded-md bg-[#152030]">
         {loading ? (
           <p className="text-gray-300">Loading product...</p>
@@ -97,8 +123,15 @@ export default function ProductPage() {
                     })
                       .then((res) => res.json())
                       .then((data) => {
-                        alert(data.message);
-                      });
+                        if (data?.success) {
+                          setAddedToast(true);
+                          setTimeout(() => setAddedToast(false), 1600); // auto hide
+                        } else {
+                          // kalau mau, tampilkan error toast lain
+                          console.warn(data?.message || "Failed to add");
+                        }
+                      })
+                      .catch(() => console.warn("Network error"));
                   }}
                   className="bg-[#2A445E] hover:bg-[#325371] px-6 py-2 rounded-full font-semibold"
                 >

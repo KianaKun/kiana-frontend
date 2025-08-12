@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/ui/Navbar";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 
 type CartItem = {
   cartID: number;
@@ -23,6 +25,8 @@ function resolveImg(src?: string | null) {
 export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const isEmpty = cart.length === 0;
+  const router = useRouter();
 
   const loadCart = () => {
     fetch("http://localhost:5000/cart", { credentials: "include" })
@@ -103,16 +107,24 @@ export default function CartPage() {
                   Rp {totalPrice.toLocaleString("id-ID")}
                 </p>
               </div>
-              <Link href="/">
-                <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
+              <button
+                onClick={() => router.push("/")}
+                className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold"
+              >
                 Return To Store
-                </button>
-              </Link>
-              <Link href="cart/payment">
-                <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
+              </button>
+              <button onClick={() => !isEmpty && router.push("/checkout/payment")}
+                disabled={isEmpty}
+                className={`px-4 py-2 rounded font-semibold ${
+                  isEmpty
+                    ? "bg-blue-600/50 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+                aria-disabled={isEmpty}
+                title={isEmpty ? "Cart kosong" : ""}
+              >
                 Do Payment Now
-                </button>
-              </Link>
+              </button>
             </div>
           </>
         )}
