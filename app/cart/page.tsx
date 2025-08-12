@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/ui/Navbar";
+import Link from "next/link";
 
 type CartItem = {
   cartID: number;
@@ -102,12 +103,16 @@ export default function CartPage() {
                   Rp {totalPrice.toLocaleString("id-ID")}
                 </p>
               </div>
-              <button className="bg-[#2A445E] hover:bg-[#325371] px-4 py-2 rounded font-semibold">
+              <Link href="/">
+                <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
                 Return To Store
-              </button>
-              <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
-                Continue Payment
-              </button>
+                </button>
+              </Link>
+              <Link href="cart/payment">
+                <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
+                Do Payment Now
+                </button>
+              </Link>
             </div>
           </>
         )}
