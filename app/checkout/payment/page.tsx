@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/ui/Navbar";
 import Image from "next/image";
+import { fetchJSON, resolveImg } from "@/components/Api"; // ← pakai helper bersama
 
 type CartItem = {
   cartID: number;
@@ -14,26 +15,13 @@ type CartItem = {
   image_url?: string | null;
 };
 
-const BACKEND =
-  (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/+$/, "");
-
-function joinUrl(base: string, path: string) {
-  return `${base}/${path.replace(/^\/+/, "")}`;
-}
-function resolveImg(src?: string | null): string {
-  if (!src || !src.trim()) return "/placeholder.png";
-  if (/^(https?:|data:|blob:)/i.test(src)) return src;
-  if (src.startsWith("/uploads")) return joinUrl(BACKEND, src);
-  return src;
-}
-
 const PAY_METHODS = [
   { code: "QRIS", label: "QRIS", img: "/image/qris.png" },
   { code: "BCA", label: "BCA", img: "/image/bca.png" },
   { code: "SEABANK", label: "SeaBank", img: "/image/seabank.png" },
 ] as const;
 
-type MethodCode = typeof PAY_METHODS[number]["code"];
+type MethodCode = (typeof PAY_METHODS)[number]["code"];
 
 export default function ChoosePaymentPage() {
   const router = useRouter();
@@ -50,52 +38,45 @@ export default function ChoosePaymentPage() {
 
   useEffect(() => {
     (async () => {
-      const me = await fetch(`${BACKEND}/me`, { credentials: "include" }).then(r => r.json());
-      if (!me?.loggedIn) { router.push("/login"); return; }
-
-      const res = await fetch(`${BACKEND}/cart`, { credentials: "include" }).then(r => r.json());
-      setCart(res?.items ?? []);
-      setLoading(false);
+      try {
+        const me = await fetchJSON("/me", { cache: "no-store" });
+        if (!me?.loggedIn) { router.push("/login"); return; }
+        const res = await fetchJSON("/cart", { cache: "no-store" });
+        setCart(res?.items ?? []);
+      } catch {
+        setCart([]);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [router]);
 
   async function handleBuyNow() {
     if (cart.length === 0) return;
-    if (!selected) {
-      alert("Pilih metode pembayaran terlebih dahulu");
-      return;
-    }
+    if (!selected) { alert("Pilih metode pembayaran terlebih dahulu"); return; }
 
     setProcessing(true);
-
     try {
-      // 1. Create order
+      // 1) Create order sekali saja
       let oid = orderID;
       if (!oid) {
-        const res = await fetch(`${BACKEND}/checkout/create-order`, {
-          method: "POST",
-          credentials: "include",
-        }).then(r => r.json());
-
+        const res = await fetchJSON("/checkout/create-order", { method: "POST" });
         if (!res?.success) throw new Error("Gagal membuat order");
-        oid = res.orderID;
+        oid = res.orderID as number;
         setOrderID(oid);
       }
 
-      // 2. Save payment method
-      const res2 = await fetch(`${BACKEND}/orders/${oid}/payment-method`, {
+      // 2) Simpan metode bayar
+      const res2 = await fetchJSON(`/orders/${oid}/payment-method`, {
         method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ method: selected }),
-      }).then(r => r.json());
-
+      });
       if (!res2?.success) throw new Error("Gagal menyimpan metode pembayaran");
 
-      // 3. Redirect ke summary
+      // 3) Ke summary
       router.push(`/checkout/summary/${oid}`);
     } catch (err: any) {
-      alert(err.message || "Terjadi kesalahan");
+      alert(err?.message || "Terjadi kesalahan");
     } finally {
       setProcessing(false);
     }
@@ -121,7 +102,7 @@ export default function ChoosePaymentPage() {
                     >
                       <div className="w-28 h-16 rounded-lg overflow-hidden">
                         <img
-                          src={resolveImg(item.image_url)}
+                          src={resolveImg(item.image_url)}  // ← via /api/uploads/...
                           alt={item.title}
                           className="w-full h-full object-cover"
                         />
@@ -151,9 +132,7 @@ export default function ChoosePaymentPage() {
                     </div>
                     <span
                       className={`ml-auto inline-block w-4 h-4 rounded-full border-2 ${
-                        selected === m.code
-                          ? "bg-[#7CC3FF] border-[#7CC3FF]"
-                          : "border-white/50"
+                        selected === m.code ? "bg-[#7CC3FF] border-[#7CC3FF]" : "border-white/50"
                       }`}
                     />
                   </button>
@@ -173,6 +152,10 @@ export default function ChoosePaymentPage() {
                   >
                     {processing ? "Processing…" : "Buy Now"}
                   </button>
+                </div>
+
+                <div className="pt-2 text-sm text-right opacity-80">
+                  Total: <span className="font-semibold">Rp {total.toLocaleString("id-ID")}</span>
                 </div>
               </aside>
             </div>

@@ -3,40 +3,39 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/ui/Navbar";
-
-const BACKEND =
-  (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/+$/, "");
-
-function joinUrl(base: string, path: string) {
-  return `${base}/${path.replace(/^\/+/, "")}`;
-}
+import { fetchJSON, resolveImg } from "@/components/Api";
 
 export default function OrderSummaryPage() {
-  const { orderID } = useParams();
+  const params = useParams();
+  const orderID = Array.isArray(params?.orderID) ? params.orderID[0] : (params?.orderID as string);
   const router = useRouter();
+
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!orderID) return;
     (async () => {
-      const res = await fetch(`${BACKEND}/orders/${orderID}`, {
-        credentials: "include",
-      }).then((r) => r.json());
-
-      if (!res?.success) {
-        alert(res.message || "Order tidak ditemukan");
+      try {
+        const res = await fetchJSON(`/orders/${orderID}`, { cache: "no-store" });
+        if (!res?.success) {
+          alert(res?.message || "Order tidak ditemukan");
+          router.push("/");
+          return;
+        }
+        setOrder(res.order);
+        setItems(res.items || []);
+      } catch (e) {
         router.push("/");
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      setOrder(res.order);
-      setItems(res.items);
-      setLoading(false);
     })();
   }, [orderID, router]);
 
-  if (loading) return <div className="text-white p-6">Loading...</div>;
+  if (!orderID) return <div className="text-white p-6">Menunggu orderID…</div>;
+  if (loading) return <div className="text-white p-6">Loading…</div>;
 
   function copyOrderID() {
     navigator.clipboard.writeText(order.orderID.toString());
@@ -44,10 +43,7 @@ export default function OrderSummaryPage() {
   }
 
   function contactWhatsApp() {
-    const message = encodeURIComponent(
-      `Halo, saya ingin konfirmasi pesanan dengan Order ID: ${order.orderID}`
-    );
-    // Ganti nomor di bawah sesuai nomor admin toko
+    const message = encodeURIComponent(`Halo, saya ingin konfirmasi pesanan dengan Order ID: ${order.orderID}`);
     window.open(`https://wa.me/6281234567890?text=${message}`, "_blank");
   }
 
@@ -61,15 +57,8 @@ export default function OrderSummaryPage() {
           {/* Items */}
           <div className="space-y-4 mb-6">
             {items.map((item) => (
-              <div
-                key={item.orderItemID}
-                className="flex items-center gap-4 bg-[#24435D] p-4 rounded-lg"
-              >
-                <img
-                  src={item.image_url ? joinUrl(BACKEND, item.image_url) : "/placeholder.png"}
-                  alt={item.title}
-                  className="w-24 h-16 object-cover rounded"
-                />
+              <div key={item.orderItemID} className="flex items-center gap-4 bg-[#24435D] p-4 rounded-lg">
+                <img src={resolveImg(item.image_url)} alt={item.title} className="w-24 h-16 object-cover rounded" />
                 <div className="flex-1">{item.title}</div>
                 <div>{item.quantity}x</div>
                 <div>Rp {item.price.toLocaleString("id-ID")}</div>
@@ -81,22 +70,13 @@ export default function OrderSummaryPage() {
           <div className="bg-[#203345] p-4 rounded-lg mb-6">
             <p>
               <strong>Order ID:</strong>{" "}
-              <span
-                className="cursor-pointer text-blue-400 hover:underline"
-                onClick={copyOrderID}
-              >
+              <span className="cursor-pointer text-blue-400 hover:underline" onClick={copyOrderID}>
                 {order.orderID}
               </span>
             </p>
-            <p>
-              <strong>Status:</strong> {order.status}
-            </p>
-            <p>
-              <strong>Total:</strong> Rp {order.total_price.toLocaleString("id-ID")}
-            </p>
-            <p>
-              <strong>Payment Method:</strong> {order.payment_method}
-            </p>
+            <p><strong>Status:</strong> {order.status}</p>
+            <p><strong>Total:</strong> Rp {order.total_price.toLocaleString("id-ID")}</p>
+            <p><strong>Payment Method:</strong> {order.payment_method || "-"}</p>
 
             {order.payment_method === "QRIS" && (
               <div className="mt-4">
@@ -117,19 +97,12 @@ export default function OrderSummaryPage() {
               </div>
             )}
 
-            {/* Tombol WhatsApp */}
-            <button
-              onClick={contactWhatsApp}
-              className="mt-4 bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-semibold w-full"
-            >
+            <button onClick={contactWhatsApp} className="mt-4 bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-semibold w-full">
               Hubungi via WhatsApp
             </button>
           </div>
 
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold"
-          >
+          <button onClick={() => router.push("/")} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">
             Return to Store
           </button>
         </div>

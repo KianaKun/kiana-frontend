@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-const BACKEND =
-  (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000").replace(/\/+$/, "");
+const API = "/api"; // ← PROXY, bukan http://localhost:5000
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,24 +11,22 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch(`${BACKEND}/login`, {
+      const res = await fetch(`${API}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // penting untuk cookie
         body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
-      if (data.success) {
-        setMessage(data.message);
-        if (data.role === "admin") {
-          window.location.href = "/admin-dashboard";
-        } else {
-          window.location.href = "/";
-        }
-      } else {
-        setMessage(data.message);
+
+      if (!res.ok) {
+        setMessage(data?.message || `${res.status} ${res.statusText}`);
+        return;
       }
+
+      setMessage(data.message || "Login sukses");
+      window.location.href = data.role === "admin" ? "/admin-dashboard" : "/";
     } catch {
       setMessage("⚠️ Gagal koneksi ke server");
     }
@@ -38,9 +35,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#0E1116] flex items-center justify-center">
       <div className="bg-[#152030] p-8 rounded-md w-[380px]">
-        <h2 className="bg-[#274056] text-white text-center py-2 font-medium mb-5">
-          Login
-        </h2>
+        <h2 className="bg-[#274056] text-white text-center py-2 font-medium mb-5">Login</h2>
+
         <label className="text-white text-sm block mb-1">Email</label>
         <input
           type="email"
@@ -48,6 +44,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+
         <label className="text-white text-sm block mb-1">Password</label>
         <input
           type="password"
@@ -55,11 +52,13 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
         <button
           onClick={handleLogin}
           className="bg-[#0E1116] text-white px-4 py-2 rounded-full hover:bg-[#1c2027]">
           Login
         </button>
+
         {message && <p className="mt-4 text-white">{message}</p>}
       </div>
     </div>

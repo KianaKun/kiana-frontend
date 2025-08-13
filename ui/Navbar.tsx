@@ -3,36 +3,42 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import { fetchJSON } from "@/components/Api"; // ⟵ pakai helper
 
-type User = {
-  id: number;
-  email: string;
-  role: "admin" | "user";
-} | null;
-
-const AUTH_BASE = "http://localhost:5000";
+type User =
+  | {
+      id?: number;
+      email: string;
+      role: "admin" | "user";
+    }
+  | null;
 
 export default function Navbars() {
   const pathname = usePathname();
   const [user, setUser] = useState<User>(null);
-  const [showConfirm, setShowConfirm] = useState(false); // state modal konfirmasi
+  const [showConfirm, setShowConfirm] = useState(false);
   const { qty } = useCart?.() ?? { qty: 0 };
 
   const recheck = useCallback(() => {
-    fetch(`${AUTH_BASE}/me`, { credentials: "include", cache: "no-store" })
-      .then((r) => r.json())
+    fetchJSON("/me", { cache: "no-store" })
       .then((data) => {
         if (!data.loggedIn) {
           setUser(null);
           return;
         }
+        // backend kirim "customer" → peta ke "user"
         const mappedRole = data.user.role === "customer" ? "user" : data.user.role;
         setUser({ ...data.user, role: mappedRole });
       })
       .catch(() => setUser(null));
   }, []);
 
-  useEffect(() => { recheck(); }, [recheck, pathname]);
+  // cek ketika route berubah
+  useEffect(() => {
+    recheck();
+  }, [recheck, pathname]);
+
+  // refetch saat window fokus (boleh, tapi jalurnya harus konsisten)
   useEffect(() => {
     window.addEventListener("focus", recheck);
     return () => window.removeEventListener("focus", recheck);
@@ -40,10 +46,7 @@ export default function Navbars() {
 
   async function handleLogout() {
     try {
-      await fetch(`${AUTH_BASE}/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await fetchJSON("/logout", { method: "POST" });
       setUser(null);
       window.location.href = "/";
     } catch (err) {
@@ -54,13 +57,11 @@ export default function Navbars() {
   return (
     <>
       <nav className="flex items-center justify-between px-6 py-4 bg-[#152030]">
-        {/* Logo */}
         <div className="flex items-center space-x-2 bg-[#0E1116] px-4 py-2 rounded-xl text-white">
           <span className="text-xl">🔑</span>
           <span className="font-bold">KianaStore Key</span>
         </div>
 
-        {/* Search (hanya untuk user biasa) */}
         {user?.role !== "admin" && (
           <div className="flex-1 flex justify-center px-6">
             <input
@@ -71,7 +72,6 @@ export default function Navbars() {
           </div>
         )}
 
-        {/* Right side */}
         <div className="flex items-center gap-2">
           {!user && (
             <>
@@ -120,7 +120,6 @@ export default function Navbars() {
         </div>
       </nav>
 
-      {/* Popup konfirmasi logout */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#152030] p-6 rounded-lg text-center shadow-lg">

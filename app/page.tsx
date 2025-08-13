@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/ui/Navbar";
 import Link from "next/link";
+import { fetchJSON, resolveImg } from "@/components/Api";
 
 type Game = {
   gameID: number;
@@ -12,20 +13,12 @@ type Game = {
   price?: number;
 };
 
-function resolveImg(src?: string | null) {
-  if (!src) return "/placeholder.png";
-  if (/^https?:\/\//i.test(src)) return src;
-  if (src.startsWith("/uploads")) return `http://localhost:5000${src}`;
-  return src;
-}
-
 export default function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:5000/games")
-      .then((res) => res.json())
+    fetchJSON("/games")
       .then((data) => {
         setGames(data.items || data);
         setLoading(false);
@@ -38,7 +31,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
-      <Navbar /> {/* ✅ Navbar selalu ada */}
+      <Navbar />
 
       <main className="p-6 bg-[#152030] mt-4 mx-6 rounded-md">
         {loading ? (
@@ -53,7 +46,7 @@ export default function HomePage() {
                   <div className="bg-transparent cursor-pointer hover:scale-105 transition-transform">
                     <div className="w-full h-48 bg-[#0E1116] rounded-lg flex items-center justify-center overflow-hidden">
                       <img
-                        src={resolveImg(game.image_url)}
+                        src={resolveImg(game.image_url)} // ⟵ konsisten via /api
                         alt={game.title}
                         className="object-cover w-full h-full rounded-lg"
                         loading="lazy"

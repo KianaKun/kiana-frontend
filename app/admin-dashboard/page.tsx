@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    fetchJSON(`${API}/admin/data`)
+    fetchJSON("/admin/data")
       .then((d) => setStats(d))
       .catch((e: any) => setMsg(e.message || "Failed to load"));
   }, []);
