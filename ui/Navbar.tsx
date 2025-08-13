@@ -1,48 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
-import { fetchJSON } from "@/components/Api"; // ⟵ pakai helper
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { fetchJSON } from "@/components/Api";
 
 type User =
-  | {
-      id?: number;
-      email: string;
-      role: "admin" | "user";
-    }
+  | { id?: number; email: string; role: "admin" | "user" }
   | null;
 
 export default function Navbars() {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const { qty } = useCart?.() ?? { qty: 0 };
 
+  // sinkronkan nilai input dengan ?q= di URL
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  useEffect(() => { setQ(searchParams.get("q") ?? ""); }, [searchParams]);
+
   const recheck = useCallback(() => {
     fetchJSON("/me", { cache: "no-store" })
       .then((data) => {
-        if (!data.loggedIn) {
-          setUser(null);
-          return;
-        }
-        // backend kirim "customer" → peta ke "user"
+        if (!data.loggedIn) { setUser(null); return; }
         const mappedRole = data.user.role === "customer" ? "user" : data.user.role;
         setUser({ ...data.user, role: mappedRole });
       })
       .catch(() => setUser(null));
   }, []);
 
-  // cek ketika route berubah
-  useEffect(() => {
-    recheck();
-  }, [recheck, pathname]);
-
-  // refetch saat window fokus (boleh, tapi jalurnya harus konsisten)
+  useEffect(() => { recheck(); }, [recheck, pathname]);
   useEffect(() => {
     window.addEventListener("focus", recheck);
     return () => window.removeEventListener("focus", recheck);
   }, [recheck]);
+
+  // debounce push ?q=
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeQ = (val: string) => {
+    setQ(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const url = val ? `/?q=${encodeURIComponent(val)}` : "/";
+      router.push(url);
+    }, 300);
+  };
 
   async function handleLogout() {
     try {
@@ -67,6 +71,14 @@ export default function Navbars() {
             <input
               type="text"
               placeholder="Search Games"
+              value={q}
+              onChange={(e) => onChangeQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const url = q ? `/?q=${encodeURIComponent(q)}` : "/";
+                  router.push(url);
+                }
+              }}
               className="w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -75,25 +87,15 @@ export default function Navbars() {
         <div className="flex items-center gap-2">
           {!user && (
             <>
-              <Link href="/register">
-                <button className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-                  Create account
-                </button>
-              </Link>
-              <Link href="/login">
-                <button className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-                  Login
-                </button>
-              </Link>
+              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Create account</Link>
+              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Login</Link>
             </>
           )}
 
           {user?.role === "user" && (
             <>
-              <Link href="/cart" className="relative">
-                <button className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-                  Cart
-                </button>
+              <Link href="/cart" className="relative bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                Cart
                 {qty > 0 && (
                   <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">
                     {qty}
@@ -125,18 +127,8 @@ export default function Navbars() {
           <div className="bg-[#152030] p-6 rounded-lg text-center shadow-lg">
             <p className="text-white mb-4">Anda yakin ingin logout?</p>
             <div className="flex justify-center gap-4">
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
-              >
-                Ya
-              </button>
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600"
-              >
-                Batal
-              </button>
+              <button onClick={handleLogout} className="bg-red-600 px-4 py-2 rounded hover:bg-red-700">Ya</button>
+              <button onClick={() => setShowConfirm(false)} className="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600">Batal</button>
             </div>
           </div>
         </div>
