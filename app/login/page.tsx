@@ -1,66 +1,141 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import Link from "next/link";
 
-const API = "/api"; // ← PROXY, bukan http://localhost:5000
+const API = "/api"; // proxy ke backend
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
 
-  const handleLogin = async () => {
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const disabled = useMemo(() => {
+    return submitting || email.trim() === "" || password.trim() === "";
+  }, [submitting, email, password]);
+
+  async function handleLogin() {
+    setMsg(null);
+    if (disabled) return;
+
     try {
+      setSubmitting(true);
+
       const res = await fetch(`${API}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // penting untuk cookie
+        credentials: "include", // penting untuk session cookie
         body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data?.message || `${res.status} ${res.statusText}`);
+        setMsg({ type: "err", text: data?.message || `${res.status} ${res.statusText}` });
+        setSubmitting(false);
         return;
       }
 
-      setMessage(data.message || "Login sukses");
-      window.location.href = data.role === "admin" ? "/admin-dashboard" : "/";
+      setMsg({ type: "ok", text: data.message || "Login sukses" });
+
+      setTimeout(() => {
+        window.location.href = data.role === "admin" ? "/admin-dashboard" : "/";
+      }, 800);
     } catch {
-      setMessage("⚠️ Gagal koneksi ke server");
+      setMsg({ type: "err", text: "⚠️ Gagal koneksi ke server" });
+      setSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-[#0E1116] flex items-center justify-center">
-      <div className="bg-[#152030] p-8 rounded-md w-[380px]">
-        <h2 className="bg-[#274056] text-white text-center py-2 font-medium mb-5">Login</h2>
+    <div className="min-h-screen bg-[#0E1116] text-white flex items-center justify-center px-4">
+      <div className="w-full max-w-[420px]">
+        {/* Kartu */}
+        <div className="relative rounded-xl bg-[#152030] border border-white/10 overflow-hidden shadow-xl">
+          {/* top strip */}
+          <div className="h-2 bg-gradient-to-r from-[#274056] via-[#30506a] to-[#274056]" />
 
-        <label className="text-white text-sm block mb-1">Email</label>
-        <input
-          type="email"
-          className="w-full px-3 py-2 mb-4 bg-[#0E1116] text-white rounded"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <div className="p-7">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-lg font-semibold">Login</h1>
+              <div className="text-xs text-white/70">
+                Belum punya akun?{" "}
+                <Link className="text-[#7CC3FF] hover:underline" href="/register">
+                  Register
+                </Link>
+              </div>
+            </div>
 
-        <label className="text-white text-sm block mb-1">Password</label>
-        <input
-          type="password"
-          className="w-full px-3 py-2 mb-4 bg-[#0E1116] text-white rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+            <Label>Email</Label>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
-        <button
-          onClick={handleLogin}
-          className="bg-[#0E1116] text-white px-4 py-2 rounded-full hover:bg-[#1c2027]">
-          Login
-        </button>
+            <div className="mt-4" />
 
-        {message && <p className="mt-4 text-white">{message}</p>}
+            <Label>Password</Label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            <button
+              onClick={handleLogin}
+              disabled={disabled}
+              className={`mt-6 w-full rounded-full px-4 py-2 font-semibold transition ${
+                disabled
+                  ? "bg-[#0E1116]/60 cursor-not-allowed"
+                  : "bg-[#0E1116] hover:bg-[#1c2027]"
+              }`}
+            >
+              {submitting ? "Logging in…" : "Login"}
+            </button>
+
+            {/* Alert/Toast kecil */}
+            {msg && (
+              <div
+                className={`mt-4 text-sm rounded-md px-3 py-2 ${
+                  msg.type === "ok"
+                    ? "bg-emerald-600/20 text-emerald-200 border border-emerald-500/30"
+                    : "bg-red-700/20 text-red-200 border border-red-500/30"
+                }`}
+              >
+                {msg.text}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer kecil */}
+        <div className="text-center text-white/50 text-xs mt-4">
+          © {new Date().getFullYear()} KianaStore Key
+        </div>
       </div>
     </div>
+  );
+}
+
+/* ———— UI kecil biar rapi & konsisten ———— */
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-sm text-white/80 mb-1">{children}</label>;
+}
+
+function Input({
+  className,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={`w-full px-3 py-2 rounded bg-[#0E1116] text-white outline-none border border-white/10 focus:border-white/20 focus:ring-2 focus:ring-[#274056] ${className || ""}`}
+    />
   );
 }
