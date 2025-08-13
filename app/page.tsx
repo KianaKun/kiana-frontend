@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "@/ui/Navbar";
-import { fetchJSON } from "@/components/Api";
+import { fetchJSON, resolveImg } from "@/components/Api";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -12,13 +12,22 @@ import Stat from "@/components/landing/Stat";
 import SkeletonCard from "@/components/landing/SkeletonCard";
 import GameCard, { type Game } from "@/components/landing/Gamecard";
 
+const ROTATE_MS = 3500; // 3.5 detik
+
 export default function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstLoad, setFirstLoad] = useState(true);
+
+  // ===== Hero slideshow state =====
+  const [heroImgs, setHeroImgs] = useState<string[]>([]);
+  const [heroIdx, setHeroIdx] = useState(0);
+  const rotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
+  // ===== Fetch games (dengan search) =====
   useEffect(() => {
     setLoading(true);
     const url = q ? `/games?search=${encodeURIComponent(q)}` : "/games";
@@ -31,10 +40,55 @@ export default function HomePage() {
       });
   }, [q]);
 
+  // ===== Fetch hero images dari backend + preload =====
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetchJSON("/images/games?limit=24"); // boleh diatur limitnya
+        const list: string[] = res?.items || [];
+        if (!alive) return;
+
+        setHeroImgs(list);
+
+        // Preload semua (opsional) atau minimal beberapa pertama
+        list.slice(0, 6).forEach((src) => {
+          const img = new Image();
+          img.src = resolveImg(src);
+        });
+      } catch {
+        if (!alive) return;
+        setHeroImgs([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // ===== Rotasi hero images =====
+  useEffect(() => {
+    if (rotateRef.current) {
+      clearInterval(rotateRef.current);
+      rotateRef.current = null;
+    }
+    if (heroImgs.length <= 1) return;
+
+    rotateRef.current = setInterval(() => {
+      setHeroIdx((i) => (i + 1) % heroImgs.length);
+    }, ROTATE_MS);
+
+    return () => {
+      if (rotateRef.current) clearInterval(rotateRef.current);
+    };
+  }, [heroImgs]);
+
   const title = useMemo(
     () => (q ? `Showing ${games.length} result${games.length !== 1 ? "s" : ""} for “${q}”` : "Featured Games"),
     [q, games.length]
   );
+
+  const currentHero = heroImgs[heroIdx] ? resolveImg(heroImgs[heroIdx]) : null;
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white overflow-x-hidden">
@@ -97,26 +151,61 @@ export default function HomePage() {
                 </motion.div>
               </div>
 
-              {/* Showcase card */}
+              {/* Showcase card — berputar tiap 3.5 detik */}
               <motion.div
                 className="relative rounded-xl border border-white/10 bg-[#0E1116] p-3"
                 initial={{ opacity: 0, scale: 0.98, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
               >
-                <div className="aspect-[16/10] w-full overflow-hidden rounded-lg">
-                  <div className="h-full w-full bg-gradient-to-br from-[#274056] to-[#30506a] flex items-center justify-center">
-                    <div className="text-center px-6">
-                      <div className="text-5xl md:text-6xl">🎮</div>
-                      <div className="mt-2 text-sm text-white/80">
-                        Deals harian, katalog terus bertambah.
+                <div className="aspect-[16/10] w-full overflow-hidden rounded-lg relative">
+                  {/* Fallback gradient bila belum ada gambar */}
+                  {!currentHero && (
+                    <div className="h-full w-full bg-gradient-to-br from-[#274056] to-[#30506a] flex items-center justify-center">
+                      <div className="text-center px-6">
+                        <div className="text-5xl md:text-6xl">🎮</div>
+                        <div className="mt-2 text-sm text-white/80">
+                          Deals harian, katalog terus bertambah.
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Cross-fade image slideshow */}
+                  <AnimatePresence mode="wait">
+                    {currentHero && (
+                      <motion.img
+                        key={currentHero}
+                        src={currentHero}
+                        alt="Showcase"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        initial={{ opacity: 0.0, scale: 1.01 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0.0, scale: 1.01 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        loading="eager"
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
+
                 <div className="absolute -top-3 -right-3 rounded-md bg-[#274056] px-2 py-1 text-xs">
                   Hot Today
                 </div>
+
+                {/* Dots indicator (opsional) */}
+                {heroImgs.length > 1 && (
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
+                    {heroImgs.slice(0, 8).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 w-3 rounded-full transition-all ${
+                          i === heroIdx ? "bg-white/90 w-5" : "bg-white/40"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </motion.div>
             </div>
           </motion.div>
