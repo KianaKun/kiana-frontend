@@ -1,3 +1,4 @@
+// app/HomePage.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -45,13 +46,13 @@ export default function HomePage() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetchJSON("/images/games?limit=24"); // boleh diatur limitnya
+        const res = await fetchJSON("/images/games?limit=24");
         const list: string[] = res?.items || [];
         if (!alive) return;
 
         setHeroImgs(list);
 
-        // Preload semua (opsional) atau minimal beberapa pertama
+        // preload beberapa
         list.slice(0, 6).forEach((src) => {
           const img = new Image();
           img.src = resolveImg(src);

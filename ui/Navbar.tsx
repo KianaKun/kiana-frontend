@@ -1,3 +1,4 @@
+// ui/Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -8,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 type User = { id?: number; email: string; role: "admin" | "user" } | null;
 
-export default function Navbars() {
+export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,7 +33,9 @@ export default function Navbars() {
 
   // sinkronkan nilai input dengan ?q= di URL
   const [q, setQ] = useState(searchParams.get("q") ?? "");
-  useEffect(() => { setQ(searchParams.get("q") ?? ""); }, [searchParams]);
+  useEffect(() => {
+    setQ(searchParams.get("q") ?? "");
+  }, [searchParams]);
 
   const recheck = useCallback(() => {
     fetchJSON("/me", { cache: "no-store" })
@@ -68,7 +71,6 @@ export default function Navbars() {
         setShowConfirm(false);
         setUser(null);
         showToast("ok", "Berhasil logout");
-        // beri 900ms supaya animasi toast sempat terlihat baru redirect
         setTimeout(() => { window.location.href = "/"; }, 900);
       } else {
         showToast("err", "Gagal logout");
@@ -143,30 +145,7 @@ export default function Navbars() {
         </div>
       </nav>
 
-      {/* Modal konfirmasi logout */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, y: 14, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            className="bg-[#152030] border border-white/10 p-6 rounded-lg text-center shadow-2xl"
-          >
-            <p className="text-white mb-4">Anda yakin ingin logout?</p>
-            <div className="flex justify-center gap-4">
-              <button onClick={handleLogout} className="bg-red-600 px-4 py-2 rounded hover:bg-red-700">
-                Ya
-              </button>
-              <button onClick={() => setShowConfirm(false)} className="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600">
-                Batal
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Toast logout */}
-{/* Modal konfirmasi logout + animasi exit */}
+      {/* Modal konfirmasi logout + animasi exit (HANYA SEKALI) */}
       <AnimatePresence>
         {showConfirm && (
           <motion.div
@@ -175,7 +154,7 @@ export default function Navbars() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowConfirm(false)} // klik backdrop = tutup dg animasi
+            onClick={() => setShowConfirm(false)} // klik backdrop = tutup
           >
             <motion.div
               key="logout-dialog"
@@ -184,20 +163,14 @@ export default function Navbars() {
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               className="bg-[#152030] border border-white/10 p-6 rounded-lg text-center shadow-2xl"
-              onClick={(e) => e.stopPropagation()} // cegah close saat klik konten
+              onClick={(e) => e.stopPropagation()}
             >
               <p className="text-white mb-4">Anda yakin ingin logout?</p>
               <div className="flex justify-center gap-4">
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
-                >
+                <button onClick={handleLogout} className="bg-red-600 px-4 py-2 rounded hover:bg-red-700">
                   Ya
                 </button>
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600"
-                >
+                <button onClick={() => setShowConfirm(false)} className="bg-gray-500 px-4 py-2 rounded hover:bg-gray-600">
                   Batal
                 </button>
               </div>
