@@ -24,18 +24,18 @@ yarn install
 # or
 pnpm install
 ```
-2. Configure environment variables
+### 2. Configure environment variables
 
 Create a .env.local file in the root folder:
 ```
 NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
 ```
-3. Run the development server
+### 3. Run the development server
 ```
 nodemon run dev
 ```
 
-📂 Project Structure
+### 📂 Project Structure
 ```
 kiana-frontend/
 ├── app/                  # App router pages
