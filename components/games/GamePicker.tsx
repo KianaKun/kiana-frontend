@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-export type Game = {
-  gameID: number;
-  title: string;
-};
+import type { Game } from "./types";
 
 type Props = {
   games: Game[];
@@ -17,6 +13,8 @@ type Props = {
   errorText?: string;
   disabled?: boolean;
   loading?: boolean;
+  /** Default true: sembunyikan game yang is_deleted=1 */
+  excludeArchived?: boolean;
 };
 
 export default function GamePicker({
@@ -29,21 +27,25 @@ export default function GamePicker({
   errorText,
   disabled = false,
   loading = false,
+  excludeArchived = true,
 }: Props) {
   const [q, setQ] = useState("");
 
-  // filter by query (case-insensitive)
-  const filtered = useMemo(() => {
+  // 1) Saring archived
+  const visibleGames = useMemo(() => {
+    const base =
+      excludeArchived ? games.filter((g: any) => (g?.is_deleted ?? 0) === 0) : games;
+
     const term = q.trim().toLowerCase();
-    if (!term) return games;
-    return games.filter((g) => g.title.toLowerCase().includes(term));
-  }, [games, q]);
+    if (!term) return base;
+    return base.filter((g) => g.title.toLowerCase().includes(term));
+  }, [games, q, excludeArchived]);
 
   const hasError = !!errorText;
 
   return (
     <div className="bg-[#152030] p-4 rounded-md border border-white/10">
-      {/* Label + selected badge */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <label className="text-sm text-white/80">{label}</label>
         {value ? (
@@ -60,11 +62,10 @@ export default function GamePicker({
             type="text"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Cari judul…"
-            className="w-full px-3 py-2 pl-9 rounded bg-[#0E1116] text-white outline-none ring-1 ring-transparent focus:ring-[#30506a] placeholder-white/40"
+            placeholder="🔎 Cari judul…"
+            className="w-full px-3 py-2 pl-3 rounded bg-[#0E1116] text-white outline-none ring-1 ring-transparent focus:ring-[#30506a] placeholder-white/40"
             disabled={disabled || loading}
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">🔎</span>
         </div>
 
         {/* Clear selected */}
@@ -86,10 +87,10 @@ export default function GamePicker({
                     ${hasError ? "ring-1 ring-rose-500" : ""}`}
         value={value ?? 0}
         onChange={(e) => onChange(Number(e.target.value))}
-        disabled={disabled || loading || filtered.length === 0}
+        disabled={disabled || loading || visibleGames.length === 0}
       >
         <option value={0}>{loading ? "Loading…" : placeholder}</option>
-        {filtered.map((g) => (
+        {visibleGames.map((g) => (
           <option key={g.gameID} value={g.gameID}>
             {g.title}
           </option>
@@ -101,13 +102,11 @@ export default function GamePicker({
         <span className="text-white/60">
           {loading
             ? "Mengambil data…"
-            : filtered.length > 0
-            ? `${filtered.length} game`
+            : visibleGames.length > 0
+            ? `${visibleGames.length} game`
             : "Tidak ada hasil"}
         </span>
-        {helperText && !hasError && (
-          <span className="text-white/50">{helperText}</span>
-        )}
+        {helperText && !hasError && <span className="text-white/50">{helperText}</span>}
         {hasError && <span className="text-rose-300">{errorText}</span>}
       </div>
     </div>

@@ -25,22 +25,26 @@ type CartItem = {
   quantity: number;
   gameID: number;
   title: string;
-  price: number | string; // DB bisa kirim string
+  price: number | string;
   image_url?: string | null;
 };
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [confirmDel, setConfirmDel] = useState<CartItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const loadCart = async () => {
     try {
+      setError(null);
       const data = await fetchJSON("/cart", { cache: "no-store" });
       setCart(data.items || []);
-    } catch {
+    } catch (err: any) {
       setCart([]);
+      setError(err?.message || "Gagal memuat cart");
     } finally {
       setLoading(false);
     }
@@ -48,17 +52,68 @@ export default function CartPage() {
 
   const updateQuantity = async (cartID: number, qty: number) => {
     if (qty < 1) return;
-    await fetchJSON(`/cart/${cartID}`, {
-      method: "PUT",
-      body: JSON.stringify({ quantity: qty }),
-    });
-    loadCart();
+    
+    try {
+      await fetchJSON(`/cart/${cartID}`, {
+        method: "PUT",
+        body: JSON.stringify({ quantity: qty }),
+      });
+      await loadCart();
+    } catch (err: any) {
+      setError(err?.message || "Gagal update quantity");
+    }
   };
 
   const removeItem = async (cartID: number) => {
-    await fetchJSON(`/cart/${cartID}`, { method: "DELETE" });
-    setConfirmDel(null);
-    loadCart();
+    try {
+      await fetchJSON(`/cart/${cartID}`, { method: "DELETE" });
+      setConfirmDel(null);
+      await loadCart();
+    } catch (err: any) {
+      setError(err?.message || "Gagal hapus item");
+    }
+  };
+
+  const proceedToCheckout = async () => {
+    if (cart.length === 0 || processing) return;
+    
+    try {
+      setProcessing(true);
+      setError(null);
+
+      // Check login status
+      const auth = await fetchJSON("/me", { cache: "no-store" });
+      if (!auth.loggedIn) {
+        router.push("/login");
+        return;
+      }
+
+      // Create order menggunakan endpoint yang sudah ada
+      const orderResponse = await fetchJSON("/checkout/create-order", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!orderResponse?.success || !orderResponse?.orderID) {
+        throw new Error(orderResponse?.message || "Gagal membuat order");
+      }
+
+      // Simpan orderID untuk reference
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("lastOrderId", orderResponse.orderID.toString());
+      }
+
+      // Redirect ke payment page dengan orderID
+      router.push(`/checkout/payment?orderId=${orderResponse.orderID}`);
+      
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      setError(err?.message || "Gagal proses checkout. Silakan coba lagi.");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   useEffect(() => {
@@ -70,6 +125,7 @@ export default function CartPage() {
       cart.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0),
     [cart]
   );
+  
   const isEmpty = !loading && cart.length === 0;
 
   return (
@@ -92,6 +148,20 @@ export default function CartPage() {
             WIB
           </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 rounded-lg bg-red-700/20 border border-red-700/50 text-red-200"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-red-400">⚠️</span>
+              {error}
+            </div>
+          </motion.div>
+        )}
 
         {/* Layout */}
         <div className="flex flex-col md:flex-row gap-8">
@@ -119,7 +189,7 @@ export default function CartPage() {
             )}
 
             {/* Empty state */}
-            {!loading && cart.length === 0 && (
+            {isEmpty && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -129,7 +199,7 @@ export default function CartPage() {
                 <div className="mb-3">Cart kamu masih kosong.</div>
                 <Link
                   href="/"
-                  className="inline-block bg-[#274056] hover:bg-[#30506a] px-4 py-2 rounded-md"
+                  className="inline-block bg-[#274056] hover:bg-[#30506a] px-4 py-2 rounded-md transition-colors"
                 >
                   Belanja dulu
                 </Link>
@@ -178,7 +248,7 @@ export default function CartPage() {
                         <div className="flex items-center gap-2">
                           <button
                             aria-label="Kurangi"
-                            className="px-3 py-1 rounded bg-[#274056] hover:bg-[#30506a]"
+                            className="px-3 py-1 rounded bg-[#274056] hover:bg-[#30506a] transition-colors"
                             onClick={() =>
                               item.quantity > 1
                                 ? updateQuantity(item.cartID, item.quantity - 1)
@@ -192,7 +262,7 @@ export default function CartPage() {
                           </div>
                           <button
                             aria-label="Tambah"
-                            className="px-3 py-1 rounded bg-[#274056] hover:bg-[#30506a]"
+                            className="px-3 py-1 rounded bg-[#274056] hover:bg-[#30506a] transition-colors"
                             onClick={() => updateQuantity(item.cartID, item.quantity + 1)}
                           >
                             +
@@ -200,7 +270,7 @@ export default function CartPage() {
                           {/* Remove */}
                           <button
                             aria-label="Hapus item"
-                            className="ml-2 px-3 py-1 rounded bg-red-700/80 hover:bg-red-700"
+                            className="ml-2 px-3 py-1 rounded bg-red-700/80 hover:bg-red-700 transition-colors"
                             onClick={() => setConfirmDel(item)}
                           >
                             Hapus
@@ -230,26 +300,32 @@ export default function CartPage() {
 
               <div className="mt-4 h-px bg-white/10" />
 
-
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <button
                   onClick={() => router.push("/")}
-                  className="w-full bg-[#274056] hover:bg-[#30506a] px-4 py-2 rounded-md font-semibold"
+                  className="w-full bg-[#274056] hover:bg-[#30506a] px-4 py-2 rounded-md font-semibold transition-colors"
                 >
                   Return
                 </button>
                 <button
-                  onClick={() => !isEmpty && router.push("/checkout/payment")}
-                  disabled={isEmpty}
-                  className={`w-full px-4 py-2 rounded-md font-semibold ${
-                    isEmpty
+                  onClick={proceedToCheckout}
+                  disabled={isEmpty || processing}
+                  className={`w-full px-4 py-2 rounded-md font-semibold transition-colors ${
+                    isEmpty || processing
                       ? "bg-[#274056]/50 cursor-not-allowed"
                       : "bg-[#274056] hover:bg-[#30506a]"
                   }`}
-                  aria-disabled={isEmpty}
-                  title={isEmpty ? "Cart kosong" : "Lanjut bayar"}
+                  aria-disabled={isEmpty || processing}
+                  title={isEmpty ? "Cart kosong" : processing ? "Processing..." : "Lanjut bayar"}
                 >
-                  Checkout
+                  {processing ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Processing...
+                    </div>
+                  ) : (
+                    "Checkout"
+                  )}
                 </button>
               </div>
             </div>
@@ -279,13 +355,13 @@ export default function CartPage() {
               </div>
               <div className="mt-5 flex justify-end gap-3">
                 <button
-                  className="px-4 py-2 rounded-md bg-[#274056] hover:bg-[#30506a]"
+                  className="px-4 py-2 rounded-md bg-[#274056] hover:bg-[#30506a] transition-colors"
                   onClick={() => setConfirmDel(null)}
                 >
                   Batal
                 </button>
                 <button
-                  className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-600"
+                  className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-600 transition-colors"
                   onClick={() => removeItem(confirmDel.cartID)}
                 >
                   Hapus

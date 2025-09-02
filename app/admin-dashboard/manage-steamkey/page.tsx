@@ -12,6 +12,7 @@ type Game = {
   gameID: number;
   title: string;
   image_url?: string | null;
+  is_deleted?: 0 | 1; // ⬅️ penting untuk guard FE
 };
 
 type SteamKey = {
@@ -56,16 +57,26 @@ export default function ManageSteamkeyPage() {
     setLoading(true);
     try {
       const [gamesData, keysData] = await Promise.all([
-        fetchJSON(`${API}/admin/games`, { credentials: "include" }),
+        // ⬇️ ambil hanya game aktif dari backend
+        fetchJSON(`${API}/admin/games?active=1`, { credentials: "include" }),
         fetchJSON(SK_API, { credentials: "include" }).catch(() => ({ items: [] })),
       ]);
 
-      setGames(gamesData.items || gamesData);
+      // ⬇️ guard FE kalau backend keliru/legacy
+      const rawGames: Game[] = (gamesData.items || gamesData || []) as Game[];
+      const activeGames = rawGames.filter((g) => (g?.is_deleted ?? 0) === 0);
+      setGames(activeGames);
 
+      // ⬇️ hanya stok available
       const allKeys: SteamKey[] = (keysData.items || keysData || []).filter(
         (k: SteamKey) => String(k.status).toLowerCase() === "available"
       );
       setKeys(allKeys);
+
+      // jika game ter-archive saat ini, reset pilihan
+      if (form.gameID && !activeGames.some((g) => g.gameID === form.gameID)) {
+        setForm((f) => ({ ...f, gameID: 0 }));
+      }
     } finally {
       setLoading(false);
     }
@@ -73,17 +84,28 @@ export default function ManageSteamkeyPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Set ID game aktif, untuk menyaring keys orphan/nggak valid
+  const activeIds = useMemo(() => new Set(games.map((g) => g.gameID)), [games]);
+
+  // Grouping keys per game (hanya untuk game aktif)
   const grouped = useMemo(() => {
     const map = new Map<number, SteamKey[]>();
     for (const k of keys) {
+      if (!activeIds.has(k.gameID)) continue; // ⬅️ cegah munculnya game yg sudah di-archive
       const arr = map.get(k.gameID) || [];
       arr.push(k);
       map.set(k.gameID, arr);
     }
     return map;
-  }, [keys]);
+  }, [keys, activeIds]);
+
+  const gamesWithStock = useMemo(
+    () => games.filter((g) => (grouped.get(g.gameID)?.length || 0) > 0),
+    [games, grouped]
+  );
 
   const askConfirm = (payload: PendingAction) => {
     setPending(payload);
@@ -192,27 +214,24 @@ export default function ManageSteamkeyPage() {
               </div>
             ))
           ) : (
-            games
-              .filter((g) => (grouped.get(g.gameID)?.length || 0) > 0)
-              .map((g) => (
-                <GameKeyCard
-                  key={g.gameID}
-                  game={g}
-                  keys={grouped.get(g.gameID)!}
-                  onQuickAdd={(keyCode, done) => {
-                    // ✅ lebih jelas & aman
-                    askConfirm({
-                      kind: "quick-add",
-                      gameID: g.gameID,
-                      key_code: keyCode.trim(),
-                    });
-                    done?.();
-                  }}
-                />
-              ))
+            gamesWithStock.map((g) => (
+              <GameKeyCard
+                key={g.gameID}
+                game={g}
+                keys={grouped.get(g.gameID)!}
+                onQuickAdd={(keyCode, done) => {
+                  askConfirm({
+                    kind: "quick-add",
+                    gameID: g.gameID,
+                    key_code: keyCode.trim(),
+                  });
+                  done?.();
+                }}
+              />
+            ))
           )}
 
-          {!loading && Array.from(grouped.values()).flat().length === 0 && (
+          {!loading && gamesWithStock.length === 0 && (
             <div className="col-span-full rounded-lg border border-white/10 bg-[#152030] p-6 text-center text-white/70">
               Belum ada stok <b>available</b>. Tambahkan key baru lewat form di atas atau quick-add per game.
             </div>
@@ -265,12 +284,7 @@ function GameKeyCard({
   return (
     <div className="rounded-lg border border-white/10 bg-[#152030] overflow-hidden flex flex-col">
       <div className="relative h-40 w-full overflow-hidden">
-        {/* ❗️hapus fallbackSrc, cukup resolveImg di src */}
-        <ImageServer
-          src={resolveImg(game.image_url)}
-          alt={game.title}
-          className="h-full w-full object-cover"
-        />
+        <ImageServer src={resolveImg(game.image_url)} alt={game.title} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#152030] via-transparent to-transparent" />
       </div>
 
@@ -310,8 +324,6 @@ function GameKeyCard({
   );
 }
 
-/* --------- Confirm Toast & Info Toast (tidak berubah) --------- */
-// ... (tetap sama seperti di pesanmu)
 /* --------- Confirm Toast ---------- */
 function ConfirmToast({
   open,
@@ -337,9 +349,7 @@ function ConfirmToast({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          {/* backdrop */}
           <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-          {/* toast card */}
           <motion.div
             className="relative w-full max-w-md rounded-xl border border-amber-400/20 bg-[#2b1f0e] text-amber-100 shadow-2xl p-4"
             initial={{ y: 24, opacity: 0, scale: 0.98 }}

@@ -16,7 +16,8 @@ type Mode = "idle" | "add" | "edit" | "delete";
 
 export default function ManageGamesPage() {
   const [mode, setMode] = useState<Mode>("idle");
-  const [games, setGames] = useState<GameFull[]>([]);
+  const [games, setGames] = useState<GameFull[]>([]);              // admin list
+  const [previewGames, setPreviewGames] = useState<GameFull[]>([]); // public list
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -46,12 +47,17 @@ export default function ManageGamesPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const d = await fetchJSON(`${API}/admin/games`, { credentials: "include" });
-      setGames(d.items || d);
+      const [adm, pub] = await Promise.all([
+        fetchJSON(`${API}/admin/games?active=1`, { credentials: "include" }), // hanya aktif
+        fetchJSON(`${API}/games`),                                            // hanya aktif
+      ]);
+      setGames(adm.items || adm);
+      setPreviewGames(pub.items || pub);
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     load();
   }, []);
@@ -110,14 +116,28 @@ export default function ManageGamesPage() {
     setDelTarget({ id: g.gameID, title: g.title });
     setDelOpen(true);
   };
+
   const confirmDelete = async () => {
     if (!delTarget) return;
     try {
-      await fetchJSON(`${API}/admin/games/${delTarget.id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`${API}/admin/games/${delTarget.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok) throw new Error(data?.message || "Failed");
+
       setDelOpen(false);
       setDelTarget(null);
-      showToast("ok", `"${delTarget.title}" deleted`);
-      await load();
+
+      showToast(
+        "ok",
+        data?.archived
+          ? `"${delTarget.title}" di-arsipkan (gambar terhapus)`
+          : `"${delTarget.title}" deleted`
+      );
+
+      await load(); // reload admin & public list
       reset();
     } catch (e: any) {
       showToast("err", e?.message || "Failed to delete");
@@ -138,7 +158,6 @@ export default function ManageGamesPage() {
     }
   };
 
-  // Label yang tampil di header
   const headerLabel = useMemo(() => {
     switch (mode) {
       case "add": return "Add Game";
@@ -147,6 +166,11 @@ export default function ManageGamesPage() {
       default: return "Manage Games";
     }
   }, [mode]);
+
+  const activeAdminGames = useMemo(
+  () => games.filter((g: any) => (g.is_deleted ?? 0) === 0),
+  [games]
+  );
 
   return (
     <AdminRoute>
@@ -201,13 +225,7 @@ export default function ManageGamesPage() {
         {/* Body */}
         <AnimatePresence mode="wait">
           {loading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="bg-[#152030] border border-white/10 p-4 rounded-md animate-pulse">
                   <div className="h-28 bg-white/10 rounded" />
@@ -217,13 +235,7 @@ export default function ManageGamesPage() {
               ))}
             </motion.div>
           ) : (
-            <motion.div
-              key="content"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
-            >
+            <motion.div key="content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
               {mode === "add" && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
                   <GameForm
@@ -237,7 +249,12 @@ export default function ManageGamesPage() {
 
               {mode === "edit" && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                  <GamePicker games={games} value={selectedId} onChange={onPickGame} label="Choose Game" />
+                  <GamePicker
+                    games={activeAdminGames}
+                    value={selectedId}
+                    onChange={onPickGame}
+                    label="Choose Game"
+                  />
                   {selectedId && (
                     <div className="mt-4">
                       <GameForm
@@ -252,12 +269,13 @@ export default function ManageGamesPage() {
               )}
 
               {mode === "delete" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-[#152030] p-4 rounded-md border border-white/10"
-                >
-                  <GamePicker games={games} value={selectedId} onChange={setSelectedId} label="Choose Game to Delete" />
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-[#152030] p-4 rounded-md border border-white/10">
+                  <GamePicker
+                    games={activeAdminGames}
+                    value={selectedId}
+                    onChange={setSelectedId}
+                    label="Choose Game to Delete"
+                  />
                   <div className="mt-3">
                     <button
                       onClick={askDelete}
@@ -270,8 +288,9 @@ export default function ManageGamesPage() {
                 </motion.div>
               )}
 
+              {/* Preview pakai /games (public) */}
               <div className="mt-4">
-                <GameCardsPreview games={games} />
+                <GameCardsPreview games={previewGames} />
               </div>
             </motion.div>
           )}
@@ -283,10 +302,7 @@ export default function ManageGamesPage() {
           title="Delete Game"
           message={`Delete "${delTarget?.title}"? This cannot be undone.`}
           onConfirm={confirmDelete}
-          onCancel={() => {
-            setDelOpen(false);
-            setDelTarget(null);
-          }}
+          onCancel={() => { setDelOpen(false); setDelTarget(null); }}
         />
 
         {/* Toast */}
@@ -308,16 +324,8 @@ export default function ManageGamesPage() {
                 }`}
               >
                 <span className="relative inline-flex">
-                  <span
-                    className={`absolute inline-flex h-7 w-7 rounded-full ${
-                      toast.type === "ok" ? "bg-emerald-500" : "bg-rose-500"
-                    } opacity-60 animate-ping`}
-                  />
-                  <span
-                    className={`relative inline-flex items-center justify-center h-7 w-7 rounded-full ${
-                      toast.type === "ok" ? "bg-emerald-500" : "bg-rose-500"
-                    }`}
-                  >
+                  <span className={`absolute inline-flex h-7 w-7 rounded-full ${toast.type === "ok" ? "bg-emerald-500" : "bg-rose-500"} opacity-60 animate-ping`} />
+                  <span className={`relative inline-flex items-center justify-center h-7 w-7 rounded-full ${toast.type === "ok" ? "bg-emerald-500" : "bg-rose-500"}`}>
                     {toast.type === "ok" ? "✓" : "!"}
                   </span>
                 </span>
