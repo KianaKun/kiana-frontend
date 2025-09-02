@@ -35,8 +35,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
 nodemon run dev
 ```
 
-Project Structure :
 📂 Project Structure
+```
 kiana-frontend/
 ├── app/                  # App router pages
 ├── components/           # Reusable UI components
@@ -44,3 +44,4 @@ kiana-frontend/
 ├── public/               # Static assets
 ├── styles/               # Global styles
 └── ...
+```
