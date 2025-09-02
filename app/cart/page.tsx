@@ -132,7 +132,7 @@ export default function CartPage() {
     <div className="min-h-screen bg-[#0E1116] text-white">
       <Navbar />
 
-      <main className="p-6 mt-4 mx-6 rounded-2xl bg-[#152030] border border-white/10 max-w-[1200px] mx-auto">
+      <main className="p-6 mt-4 mx-6 rounded-2xl bg-[#152030] border border-white/10 max-w-[1200px]">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold">Your Cart</h1>
