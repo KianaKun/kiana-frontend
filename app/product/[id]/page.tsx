@@ -209,9 +209,11 @@ export default function ProductPage() {
               className="flex-1 flex flex-col bg-[#0E1116] p-6 rounded-xl border border-white/10"
             >
               <h1 className="text-2xl font-semibold">{game.title}</h1>
-              <p className="mt-2 text-white/70 leading-relaxed">
-                {game.description || "Tidak ada deskripsi untuk produk ini."}
-              </p>
+              {/* Deskripsi game */}
+              <div className="mt-2 text-white/70 leading-relaxed space-y-3">
+                {formatDescription(game.description || "Tidak ada deskripsi untuk produk ini.")}
+              </div>
+
 
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 <Badge label="Region" value="Asia" />
@@ -353,3 +355,17 @@ function Badge({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function formatDescription(desc: string) {
+  // 1. Pecah dulu berdasarkan newline ganda
+  let parts = desc.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+  // 2. Kalau ternyata hasilnya cuma 1 (nggak ada newline),
+  //    coba pecah berdasarkan titik + spasi
+  if (parts.length === 1) {
+    parts = desc.split(/(?<=\.)\s+/).map(p => p.trim()).filter(Boolean);
+  }
+
+  return parts.map((para, idx) => <p key={idx}>{para}</p>);
+}
+
