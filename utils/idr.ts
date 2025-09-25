@@ -1,4 +1,4 @@
-// utils/idr.ts
+// for converting idr format
 export function toIDR(v: unknown) {
   const n =
     typeof v === "number" ? v :
