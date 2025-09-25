@@ -1,15 +1,6 @@
-import type { NextConfig } from "next";
-
 const nextConfig: NextConfig = {
-  // 🚫 Matikan ESLint check waktu build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // 🚫 Matikan TypeScript check waktu build
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  // Kalau pakai rewrites ke backend
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   async rewrites() {
     return [
       {
@@ -18,11 +9,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Untuk GitHub Pages (static export)
-  output: "export",
-  images: {
-    unoptimized: true, // karena GitHub Pages ga support Image Optimization
-  },
+  images: { unoptimized: true },
 };
 
 export default nextConfig;
