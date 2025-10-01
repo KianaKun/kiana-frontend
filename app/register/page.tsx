@@ -1,3 +1,4 @@
+//register page
 "use client";
 
 import { useState, useMemo } from "react";
