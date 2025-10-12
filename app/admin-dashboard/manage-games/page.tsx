@@ -16,12 +16,12 @@ type Mode = "idle" | "add" | "edit" | "delete";
 
 export default function ManageGamesPage() {
   const [mode, setMode] = useState<Mode>("idle");
-  const [games, setGames] = useState<GameFull[]>([]);              // admin list
-  const [previewGames, setPreviewGames] = useState<GameFull[]>([]); // public list
+  const [games, setGames] = useState<GameFull[]>([]);
+  const [previewGames, setPreviewGames] = useState<GameFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // toast mini
+  // Toast mini
   const [toast, setToast] = useState<{ open: boolean; type: "ok" | "err"; text: string }>({
     open: false,
     type: "ok",
@@ -48,8 +48,8 @@ export default function ManageGamesPage() {
     setLoading(true);
     try {
       const [adm, pub] = await Promise.all([
-        fetchJSON(`${API}/admin/games?active=1`, { credentials: "include" }), // hanya aktif
-        fetchJSON(`${API}/games`),                                            // hanya aktif
+        fetchJSON(`${API}/admin/games?active=1`, { credentials: "include" }),
+        fetchJSON(`${API}/games`),
       ]);
       setGames(adm.items || adm);
       setPreviewGames(pub.items || pub);
@@ -134,10 +134,10 @@ export default function ManageGamesPage() {
         "ok",
         data?.archived
           ? `"${delTarget.title}" di-arsipkan (gambar terhapus)`
-          : `"${delTarget.title}" deleted`
+          : `"${delTarget.title}" deleted"`
       );
 
-      await load(); // reload admin & public list
+      await load();
       reset();
     } catch (e: any) {
       showToast("err", e?.message || "Failed to delete");
@@ -168,8 +168,8 @@ export default function ManageGamesPage() {
   }, [mode]);
 
   const activeAdminGames = useMemo(
-  () => games.filter((g: any) => (g.is_deleted ?? 0) === 0),
-  [games]
+    () => games.filter((g: any) => (g.is_deleted ?? 0) === 0),
+    [games]
   );
 
   return (
@@ -178,18 +178,18 @@ export default function ManageGamesPage() {
       <AdminShell>
         {/* Header */}
         <motion.div
-          className="bg-[#152030] p-4 rounded-md mb-4 border border-white/10"
+          className="bg-[#152030] p-4 sm:p-6 rounded-md mb-4 border border-white/10"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="font-medium">{headerLabel}</h2>
-              <p className="text-xs text-white/60">
+              <h2 className="text-lg sm:text-xl font-semibold">{headerLabel}</h2>
+              <p className="text-xs sm:text-sm text-white/60">
                 Kelola katalog—tambah, ubah, dan hapus game. Pratinjau ada di bawah.
               </p>
             </div>
-            <div className="text-xs text-white/60 hidden sm:block">
+            <div className="text-xs sm:text-sm text-white/60">
               {new Date().toLocaleString("id-ID", {
                 timeZone: "Asia/Jakarta",
                 hour: "2-digit",
@@ -197,17 +197,17 @@ export default function ManageGamesPage() {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
-              })}{" "}
-              WIB
+              })} WIB
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-3">
+          {/* Mode Buttons */}
+          <div className="mt-3 flex flex-wrap gap-2 sm:gap-3">
             {(["add", "edit", "delete"] as Mode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-4 py-2 rounded transition ${
+                className={`px-4 py-2 rounded text-sm sm:text-base transition w-full sm:w-auto ${
                   mode === m ? "bg-[#30506a]" : "bg-[#274056] hover:bg-[#30506a]"
                 }`}
               >
@@ -215,7 +215,10 @@ export default function ManageGamesPage() {
               </button>
             ))}
             {mode !== "idle" && (
-              <button onClick={reset} className="px-4 py-2 rounded bg-[#0E1116] hover:bg-[#151a21] transition">
+              <button
+                onClick={reset}
+                className="px-4 py-2 rounded text-sm sm:text-base bg-[#0E1116] hover:bg-[#151a21] transition w-full sm:w-auto"
+              >
                 Cancel
               </button>
             )}
@@ -225,7 +228,13 @@ export default function ManageGamesPage() {
         {/* Body */}
         <AnimatePresence mode="wait">
           {loading ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="bg-[#152030] border border-white/10 p-4 rounded-md animate-pulse">
                   <div className="h-28 bg-white/10 rounded" />
@@ -235,7 +244,13 @@ export default function ManageGamesPage() {
               ))}
             </motion.div>
           ) : (
-            <motion.div key="content" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+            <motion.div
+              key="content"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
               {mode === "add" && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
                   <GameForm
@@ -269,18 +284,22 @@ export default function ManageGamesPage() {
               )}
 
               {mode === "delete" && (
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-[#152030] p-4 rounded-md border border-white/10">
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-[#152030] p-4 rounded-md border border-white/10"
+                >
                   <GamePicker
                     games={activeAdminGames}
                     value={selectedId}
                     onChange={setSelectedId}
                     label="Choose Game to Delete"
                   />
-                  <div className="mt-3">
+                  <div className="mt-3 flex justify-end sm:justify-start">
                     <button
                       onClick={askDelete}
                       disabled={!selectedId}
-                      className="bg-red-700 px-4 py-2 rounded disabled:opacity-50 hover:bg-red-800 transition"
+                      className="bg-red-700 px-4 py-2 rounded disabled:opacity-50 hover:bg-red-800 transition w-full sm:w-auto"
                     >
                       Delete
                     </button>
@@ -288,7 +307,7 @@ export default function ManageGamesPage() {
                 </motion.div>
               )}
 
-              {/* Preview pakai /games (public) */}
+              {/* Preview section */}
               <div className="mt-4">
                 <GameCardsPreview games={previewGames} />
               </div>
@@ -314,10 +333,10 @@ export default function ManageGamesPage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]"
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[90%] sm:w-auto"
             >
               <div
-                className={`relative flex items-center gap-3 rounded-full px-4 py-2 shadow-xl border ${
+                className={`flex items-center gap-3 rounded-full px-4 py-2 shadow-xl border ${
                   toast.type === "ok"
                     ? "bg-[#12202f]/95 border-emerald-500/30 text-emerald-200"
                     : "bg-[#2b1720]/95 border-rose-500/30 text-rose-200"
@@ -329,7 +348,7 @@ export default function ManageGamesPage() {
                     {toast.type === "ok" ? "✓" : "!"}
                   </span>
                 </span>
-                <span className="font-medium">{toast.text}</span>
+                <span className="font-medium text-sm sm:text-base">{toast.text}</span>
               </div>
             </motion.div>
           )}

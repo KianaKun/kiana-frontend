@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { fetchJSON } from "@/components/Api";
 import { AnimatePresence, motion } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 type User = { id?: number; email: string; role: "admin" | "user" } | null;
 
@@ -16,6 +17,7 @@ export default function Navbar() {
 
   const [user, setUser] = useState<User>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { qty } = useCart?.() ?? { qty: 0 };
 
   // === Toast state ===
@@ -40,14 +42,19 @@ export default function Navbar() {
   const recheck = useCallback(() => {
     fetchJSON("/me", { cache: "no-store" })
       .then((data) => {
-        if (!data.loggedIn) { setUser(null); return; }
+        if (!data.loggedIn) {
+          setUser(null);
+          return;
+        }
         const mappedRole = data.user.role === "customer" ? "user" : data.user.role;
         setUser({ ...data.user, role: mappedRole });
       })
       .catch(() => setUser(null));
   }, []);
 
-  useEffect(() => { recheck(); }, [recheck, pathname]);
+  useEffect(() => {
+    recheck();
+  }, [recheck, pathname]);
   useEffect(() => {
     window.addEventListener("focus", recheck);
     return () => window.removeEventListener("focus", recheck);
@@ -71,7 +78,9 @@ export default function Navbar() {
         setShowConfirm(false);
         setUser(null);
         showToast("ok", "Berhasil logout");
-        setTimeout(() => { window.location.href = "/"; }, 900);
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 900);
       } else {
         showToast("err", "Gagal logout");
       }
@@ -83,14 +92,16 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="flex items-center justify-between px-6 py-4 bg-[#152030]">
-        <div className="flex items-center space-x-2 bg-[#0E1116] px-4 py-2 rounded-xl text-white">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-3 bg-[#152030] relative">
+        {/* Left: Logo */}
+        <div className="flex items-center space-x-2 bg-[#0E1116] px-3 py-2 rounded-xl text-white">
           <span className="text-xl">🔑</span>
-          <span className="font-bold">KianaStore Key</span>
+          <span className="font-bold text-sm sm:text-base">KianaStore Key</span>
         </div>
 
-        {user?.role !== "admin" && (
-          <div className="flex-1 flex justify-center px-6">
+        {/* Middle: Search (Desktop only, user only) */}
+        {user && user.role !== "admin" && (
+          <div className="hidden sm:flex flex-1 justify-center px-6">
             <input
               type="text"
               placeholder="Search Games"
@@ -102,16 +113,21 @@ export default function Navbar() {
                   router.push(url);
                 }
               }}
-              className="w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/2 xl:w-1/3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        {/* Right: Buttons */}
+        <div className="hidden sm:flex items-center gap-2">
           {!user && (
             <>
-              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Create account</Link>
-              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Login</Link>
+              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                Create account
+              </Link>
+              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                Login
+              </Link>
             </>
           )}
 
@@ -143,9 +159,96 @@ export default function Navbar() {
             </button>
           )}
         </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          className="sm:hidden text-white p-2 rounded-md hover:bg-[#274056]"
+          onClick={() => setMenuOpen((prev) => !prev)}
+        >
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+
+        {/* Mobile Dropdown Menu */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full left-0 w-full bg-[#1B2A40] flex flex-col p-4 sm:hidden z-50"
+            >
+              {user && user.role !== "admin" && (
+                <input
+                  type="text"
+                  placeholder="Search Games"
+                  value={q}
+                  onChange={(e) => onChangeQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const url = q ? `/?q=${encodeURIComponent(q)}` : "/";
+                      router.push(url);
+                      setMenuOpen(false);
+                    }
+                  }}
+                  className="w-full mb-3 px-4 py-2 rounded-full bg-[#274056] text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              )}
+
+              {!user && (
+                <>
+                  <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                    Create account
+                  </Link>
+                  <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                    Login
+                  </Link>
+                </>
+              )}
+
+              {user?.role === "user" && (
+                <>
+                  <Link
+                    href="/cart"
+                    onClick={() => setMenuOpen(false)}
+                    className="relative bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]"
+                  >
+                    Cart
+                    {qty > 0 && (
+                      <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">
+                        {qty}
+                      </span>
+                    )}
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowConfirm(true);
+                      setMenuOpen(false);
+                    }}
+                    className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
+                  >
+                    Logout
+                  </button>
+                </>
+              )}
+
+              {user?.role === "admin" && (
+                <button
+                  onClick={() => {
+                    setShowConfirm(true);
+                    setMenuOpen(false);
+                  }}
+                  className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
+                >
+                  Logout
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
-      {/* Modal konfirmasi logout + animasi exit (HANYA SEKALI) */}
+      {/* Modal konfirmasi logout */}
       <AnimatePresence>
         {showConfirm && (
           <motion.div
@@ -154,7 +257,7 @@ export default function Navbar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowConfirm(false)} // klik backdrop = tutup
+            onClick={() => setShowConfirm(false)}
           >
             <motion.div
               key="logout-dialog"
