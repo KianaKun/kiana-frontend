@@ -1,4 +1,3 @@
-// ui/Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -33,7 +32,7 @@ export default function Navbar() {
     toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), delayClose);
   };
 
-  // sinkronkan nilai input dengan ?q= di URL
+  // sync search state
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   useEffect(() => {
     setQ(searchParams.get("q") ?? "");
@@ -55,6 +54,7 @@ export default function Navbar() {
   useEffect(() => {
     recheck();
   }, [recheck, pathname]);
+
   useEffect(() => {
     window.addEventListener("focus", recheck);
     return () => window.removeEventListener("focus", recheck);
@@ -92,15 +92,15 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="flex items-center justify-between px-4 sm:px-6 py-3 bg-[#152030] relative">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-3 bg-[#152030] relative z-50">
         {/* Left: Logo */}
         <div className="flex items-center space-x-2 bg-[#0E1116] px-3 py-2 rounded-xl text-white">
           <span className="text-xl">🔑</span>
           <span className="font-bold text-sm sm:text-base">KianaStore Key</span>
         </div>
 
-        {/* Middle: Search (Desktop only, user only) */}
-        {user && user.role !== "admin" && (
+        {/* Desktop Mid Search for normal user */}
+        {user && user.role === "user" && (
           <div className="hidden sm:flex flex-1 justify-center px-6">
             <input
               type="text"
@@ -118,16 +118,12 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Right: Buttons */}
+        {/* Desktop Right Buttons (no logout for admin here) */}
         <div className="hidden sm:flex items-center gap-2">
           {!user && (
             <>
-              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-                Create account
-              </Link>
-              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
-                Login
-              </Link>
+              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Create account</Link>
+              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Login</Link>
             </>
           )}
 
@@ -136,31 +132,14 @@ export default function Navbar() {
               <Link href="/cart" className="relative bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
                 Cart
                 {qty > 0 && (
-                  <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">
-                    {qty}
-                  </span>
+                  <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">{qty}</span>
                 )}
               </Link>
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
-              >
-                Logout
-              </button>
             </>
-          )}
-
-          {user?.role === "admin" && (
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
-            >
-              Logout
-            </button>
           )}
         </div>
 
-        {/* Mobile Menu Toggle */}
+        {/* Mobile Hamburger Icon */}
         <button
           className="sm:hidden text-white p-2 rounded-md hover:bg-[#274056]"
           onClick={() => setMenuOpen((prev) => !prev)}
@@ -172,13 +151,13 @@ export default function Navbar() {
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              key="mobile-menu"
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               className="absolute top-full left-0 w-full bg-[#1B2A40] flex flex-col p-4 sm:hidden z-50"
             >
-              {user && user.role !== "admin" && (
+              {/* Search if user normal */}
+              {user?.role === "user" && (
                 <input
                   type="text"
                   placeholder="Search Games"
@@ -195,24 +174,22 @@ export default function Navbar() {
                 />
               )}
 
+              {/* Menu for non-logged user */}
               {!user && (
                 <>
-                  <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
-                    Create account
-                  </Link>
-                  <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Login
+                  </Link>
+                  <Link href="/register" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                    Create account
                   </Link>
                 </>
               )}
 
+              {/* Menu for user */}
               {user?.role === "user" && (
                 <>
-                  <Link
-                    href="/cart"
-                    onClick={() => setMenuOpen(false)}
-                    className="relative bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]"
-                  >
+                  <Link href="/cart" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a] relative">
                     Cart
                     {qty > 0 && (
                       <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">
@@ -232,27 +209,41 @@ export default function Navbar() {
                 </>
               )}
 
+              {/* Menu for admin (Navigation + Logout only here) */}
               {user?.role === "admin" && (
-                <button
-                  onClick={() => {
-                    setShowConfirm(true);
-                    setMenuOpen(false);
-                  }}
-                  className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
-                >
-                  Logout
-                </button>
+                <>
+                  <Link href="/admin-dashboard" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                    Dashboard
+                  </Link>
+                  <Link href="/admin-dashboard/manage-games" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                    Manage Games
+                  </Link>
+                  <Link href="/admin-dashboard/manage-steamkey" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                    Manage Steamkey
+                  </Link>
+                  <Link href="/admin-dashboard/manage-order" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                    Manage Order
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowConfirm(true);
+                      setMenuOpen(false);
+                    }}
+                    className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
+                  >
+                    Logout
+                  </button>
+                </>
               )}
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
 
-      {/* Modal konfirmasi logout */}
+      {/* Logout Confirmation Modal */}
       <AnimatePresence>
         {showConfirm && (
           <motion.div
-            key="logout-overlay"
             className="fixed inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -260,7 +251,6 @@ export default function Navbar() {
             onClick={() => setShowConfirm(false)}
           >
             <motion.div
-              key="logout-dialog"
               initial={{ opacity: 0, y: 14, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
