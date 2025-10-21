@@ -5,8 +5,6 @@ import Link from "next/link";
 import Script from "next/script";
 
 const API = "/api";
-
-// Ganti dengan Site Key Turnstile Anda
 const TURNSTILE_SITE_KEY = "0x4AAAAAAB7oPW03sh_FON4Z";
 
 // Declare Turnstile types
