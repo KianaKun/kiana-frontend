@@ -216,16 +216,6 @@ export default function AdminDashboardPage() {
                     color="text-purple-300"
                   />
                 </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-white/60 gap-2">
-                  <div>
-                    Data diambil realtime dari:{" "}
-                    <code className="bg-[#0E1116] px-1 py-0.5 rounded">
-                      /admin/data
-                    </code>
-                  </div>
-                  <div>{nowText}</div>
-                </div>
               </motion.div>
             ) : (
               <motion.div
