@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { fetchJSON } from "@/components/Api";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 
 type User = { id?: number; email: string; role: "admin" | "user" } | null;
 
@@ -118,12 +118,16 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Desktop Right Buttons (no logout for admin here) */}
+        {/* Desktop Right Buttons */}
         <div className="hidden sm:flex items-center gap-2">
           {!user && (
             <>
-              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Create account</Link>
-              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">Login</Link>
+              <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                Create account
+              </Link>
+              <Link href="/login" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                Login
+              </Link>
             </>
           )}
 
@@ -135,6 +139,27 @@ export default function Navbar() {
                   <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">{qty}</span>
                 )}
               </Link>
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
+                title="Logout"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </>
+          )}
+
+          {user?.role === "admin" && (
+            <>
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
+                title="Logout"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
             </>
           )}
         </div>
@@ -209,7 +234,7 @@ export default function Navbar() {
                 </>
               )}
 
-              {/* Menu for admin (Navigation + Logout only here) */}
+              {/* Menu for admin (Navigation + Logout) */}
               {user?.role === "admin" && (
                 <>
                   <Link href="/admin-dashboard" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
@@ -268,6 +293,24 @@ export default function Navbar() {
                 </button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast.open && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+              toast.type === "ok"
+                ? "bg-emerald-600 text-white"
+                : "bg-red-600 text-white"
+            }`}
+          >
+            {toast.text}
           </motion.div>
         )}
       </AnimatePresence>
