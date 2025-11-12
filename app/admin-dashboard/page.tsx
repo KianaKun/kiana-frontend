@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import AdminRoute from "@/components/AdminRoute";
-import AdminShell from "@/components/AdminShell";
-import Navbar from "@/ui/Navbar";
-import { API, fetchJSON } from "@/components/Api";
+import { useEffect, useMemo, useState } from "react";
+import AdminRoute from "@/components/admin-dashboard/AdminRoute";
+import AdminShell from "@/components/admin-dashboard/AdminShell";
+import { API, fetchJSON } from "@/components/admin-dashboard/Api";
 import { AnimatePresence, motion } from "framer-motion";
-import { RefreshCcw, Settings } from "lucide-react";
 
 type DashData = {
   success: boolean;
@@ -21,38 +19,28 @@ export default function AdminDashboardPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [auto, setAuto] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const load = async () => {
-    setErr(null);
-    setLoading(true);
-    try {
-      const d = await fetchJSON(`${API}/admin/data`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      setData(d);
-    } catch (e: any) {
-      setErr(e?.message || "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 🔄 Auto-refresh tiap 15 detik
   useEffect(() => {
-    load();
+    const load = async () => {
+      setErr(null);
+      setLoading(true);
+      try {
+        const d = await fetchJSON(`${API}/admin/data`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        setData(d);
+      } catch (e: any) {
+        setErr(e?.message || "Failed to load");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load(); // first load
+    const interval = setInterval(load, 15000); // auto reload every 15s
+    return () => clearInterval(interval); // cleanup interval
   }, []);
-
-  useEffect(() => {
-    if (auto) {
-      intervalRef.current = setInterval(() => load(), 15_000);
-      return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      };
-    }
-  }, [auto]);
 
   const nowText = useMemo(
     () =>
@@ -69,7 +57,6 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminRoute>
-      <Navbar />
       <AdminShell>
         <div className="w-full p-4 sm:p-6">
           {/* Header */}
@@ -87,69 +74,7 @@ export default function AdminDashboardPage() {
                   Ringkasan aktivitas hari ini (zona waktu WIB)
                 </p>
               </div>
-
-              {/* Tombol tindakan */}
-              <div className="relative">
-                {/* Desktop */}
-                <div className="hidden sm:flex items-center gap-3">
-                  <button
-                    onClick={load}
-                    className="flex items-center gap-2 px-3 py-2 rounded bg-[#274056] hover:bg-[#30506a] text-sm"
-                  >
-                    <RefreshCcw className="w-4 h-4" /> Refresh
-                  </button>
-                  <label className="flex items-center gap-2 text-xs text-white/80">
-                    <input
-                      type="checkbox"
-                      checked={auto}
-                      onChange={(e) => setAuto(e.target.checked)}
-                      className="accent-[#30506a]"
-                    />
-                    Auto 15s
-                  </label>
-                </div>
-
-                {/* Mobile menu */}
-                <div className="sm:hidden relative">
-                  <button
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="flex items-center gap-2 px-3 py-2 rounded bg-[#274056] hover:bg-[#30506a]"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="text-sm">Menu</span>
-                  </button>
-
-                  <AnimatePresence>
-                    {menuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        className="absolute right-0 mt-2 w-40 rounded-md bg-[#1b2838] border border-white/10 shadow-lg z-10 p-2"
-                      >
-                        <button
-                          onClick={() => {
-                            load();
-                            setMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-[#274056]"
-                        >
-                          🔄 Refresh Data
-                        </button>
-                        <label className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[#274056] rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={auto}
-                            onChange={(e) => setAuto(e.target.checked)}
-                            className="accent-[#30506a]"
-                          />
-                          Auto Refresh
-                        </label>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
+              <div className="text-xs sm:text-sm text-white/60">{nowText}</div>
             </div>
 
             {err && (
@@ -216,6 +141,10 @@ export default function AdminDashboardPage() {
                     color="text-purple-300"
                   />
                 </div>
+
+                <p className="text-xs text-white/50 text-center mt-2">
+                  Auto-refresh setiap 15 detik
+                </p>
               </motion.div>
             ) : (
               <motion.div
@@ -248,7 +177,13 @@ function Card({
   color?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-md border border-white/10 bg-[#152030] p-4">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="relative overflow-hidden rounded-md border border-white/10 bg-[#152030] p-4"
+    >
       <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/5" />
       <div className="flex items-start justify-between">
         <div className="text-white/80 text-sm">{label}</div>
@@ -256,6 +191,6 @@ function Card({
       </div>
       <div className="text-3xl font-semibold mt-1">{value}</div>
       {hint && <div className="text-xs text-white/60 mt-1">{hint}</div>}
-    </div>
+    </motion.div>
   );
 }

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Navbar from "@/ui/Navbar";
-import { fetchJSON, resolveImg } from "@/components/Api";
+import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
 
 export default function OrderSummaryPage() {
   const params = useParams();
@@ -61,7 +60,6 @@ export default function OrderSummaryPage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
-      <Navbar />
       <main className="px-6 py-8 flex justify-center">
         <div className="w-full max-w-4xl space-y-6">
           {/* Title */}

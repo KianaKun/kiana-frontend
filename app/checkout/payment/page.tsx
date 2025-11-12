@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Navbar from "@/ui/Navbar";
-import { fetchJSON, resolveImg } from "@/components/Api";
+import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
 import { motion, AnimatePresence } from "framer-motion";
 
 type OrderItem = {
@@ -116,7 +115,6 @@ export default function ChoosePaymentPage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
-      <Navbar />
 
       <main className="p-6 mt-4 mx-6 rounded-2xl bg-[#152030] border border-white/10 max-w-[1200px]">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

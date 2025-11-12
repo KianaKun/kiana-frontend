@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Navbar from "@/ui/Navbar";
-import { fetchJSON, resolveImg } from "@/components/Api";
+import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ===== Helper Rupiah aman untuk string/number ===== */
@@ -119,7 +118,6 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white">
-      <Navbar />
 
       {/* Toast success add-to-cart */}
       <AnimatePresence>

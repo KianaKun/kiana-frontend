@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { resolveImg } from "@/components/Api";
+import { resolveImg } from "@/components/admin-dashboard/Api";
 
 export default function ImageServer({
   src,

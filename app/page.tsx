@@ -2,25 +2,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Navbar from "@/ui/Navbar";
-import { fetchJSON, resolveImg } from "@/components/Api";
+import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Components
 import CTA from "@/components/landing/CTA";
 import Stat from "@/components/landing/Stat";
 import SkeletonCard from "@/components/landing/SkeletonCard";
 import GameCard, { type Game } from "@/components/landing/Gamecard";
 
-const ROTATE_MS = 3500; // 3.5 detik
+const ROTATE_MS = 3500;
 
 export default function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstLoad, setFirstLoad] = useState(true);
 
-  // ===== Hero slideshow state =====
   const [heroImgs, setHeroImgs] = useState<string[]>([]);
   const [heroIdx, setHeroIdx] = useState(0);
   const rotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -28,12 +25,21 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
-  // ===== Fetch games (dengan search) =====
+  // ===== Fetch games + filter stok kosong =====
   useEffect(() => {
     setLoading(true);
     const url = q ? `/games?search=${encodeURIComponent(q)}` : "/games";
     fetchJSON(url)
-      .then((data) => setGames(data.items || data))
+      .then((data) => {
+        const allGames: Game[] = data.items || data || [];
+        // Filter hanya game yang punya stok (stok > 0)
+        const filtered = allGames.filter((g) => {
+          // Kalau backend belum kasih stock, tampilkan semua
+          if (typeof g.stock === "undefined" || g.stock === null) return true;
+          return g.stock > 0;
+        });
+        setGames(filtered);
+      })
       .catch(() => setGames([]))
       .finally(() => {
         setLoading(false);
@@ -41,7 +47,7 @@ export default function HomePage() {
       });
   }, [q]);
 
-  // ===== Fetch hero images dari backend + preload =====
+  // ===== Fetch hero images =====
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -51,8 +57,6 @@ export default function HomePage() {
         if (!alive) return;
 
         setHeroImgs(list);
-
-        // preload beberapa
         list.slice(0, 6).forEach((src) => {
           const img = new Image();
           img.src = resolveImg(src);
@@ -69,23 +73,22 @@ export default function HomePage() {
 
   // ===== Rotasi hero images =====
   useEffect(() => {
-    if (rotateRef.current) {
-      clearInterval(rotateRef.current);
-      rotateRef.current = null;
-    }
+    if (rotateRef.current) clearInterval(rotateRef.current);
     if (heroImgs.length <= 1) return;
-
-    rotateRef.current = setInterval(() => {
-      setHeroIdx((i) => (i + 1) % heroImgs.length);
-    }, ROTATE_MS);
-
+    rotateRef.current = setInterval(
+      () => setHeroIdx((i) => (i + 1) % heroImgs.length),
+      ROTATE_MS
+    );
     return () => {
       if (rotateRef.current) clearInterval(rotateRef.current);
     };
   }, [heroImgs]);
 
   const title = useMemo(
-    () => (q ? `Showing ${games.length} result${games.length !== 1 ? "s" : ""} for “${q}”` : "Featured Games"),
+    () =>
+      q
+        ? `Showing ${games.length} result${games.length !== 1 ? "s" : ""} for “${q}”`
+        : "Featured Games",
     [q, games.length]
   );
 
@@ -93,125 +96,117 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#0E1116] text-white overflow-x-hidden">
-      <Navbar />
+      {/* Hero Section — sembunyikan kalau sedang search */}
+      {!q && (
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute -top-24 -left-24 w-[32rem] h-[32rem] rounded-full blur-3xl opacity-20 bg-[#274056] animate-pulse" />
+            <div className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-20 bg-[#30506a] animate-[pulse_3s_ease-in-out_infinite]" />
+          </div>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Subtle animated blobs */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -top-24 -left-24 w-[32rem] h-[32rem] rounded-full blur-3xl opacity-20 bg-[#274056] animate-pulse" />
-          <div className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-20 bg-[#30506a] animate-[pulse_3s_ease-in-out_infinite]" />
-        </div>
+          <div className="mx-6 mt-6">
+            <motion.div
+              className="rounded-2xl bg-[#152030] border border-white/10 p-8 md:p-10"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <motion.h1
+                    className="text-3xl md:text-4xl font-semibold leading-tight"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, duration: 0.5 }}
+                  >
+                    Temukan Steam Key Favoritmu 👇
+                  </motion.h1>
+                  <motion.p
+                    className="mt-3 text-white/70"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                  >
+                    Pembayaran lokal (BCA, SeaBank, QRIS), verifikasi manual anti-gagal, dan pengiriman cepat via WhatsApp atau email.
+                  </motion.p>
 
-        <div className="mx-6 mt-6">
-          <motion.div
-            className="rounded-2xl bg-[#152030] border border-white/10 p-8 md:p-10"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <motion.h1
-                  className="text-3xl md:text-4xl font-semibold leading-tight"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1, duration: 0.5 }}
-                >
-                  Temukan Steam Key Favoritmu 👇
-                </motion.h1>
-                <motion.p
-                  className="mt-3 text-white/70"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                  Pembayaran lokal (BCA, SeaBank, QRIS), verifikasi manual anti-gagal, dan pengiriman kunci cepat via WhatsApp atau email.
-                </motion.p>
+                  <motion.div
+                    className="mt-5 flex flex-wrap gap-3"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    <CTA href="#games" label="Browse Games" />
+                    <CTA variant="ghost" href="/cart" label="Lihat Keranjang" />
+                  </motion.div>
 
+                  <motion.div
+                    className="mt-6 grid grid-cols-3 gap-2 text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45, duration: 0.6 }}
+                  >
+                    <Stat label="Keamanan" value="Manual Verify" />
+                    <Stat label="Metode" value="QRIS & Bank" />
+                    <Stat label="Kecepatan" value="Instan" />
+                  </motion.div>
+                </div>
+
+                {/* Showcase card slideshow */}
                 <motion.div
-                  className="mt-5 flex flex-wrap gap-3"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
+                  className="relative rounded-xl border border-white/10 bg-[#0E1116] p-3"
+                  initial={{ opacity: 0, scale: 0.98, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
                 >
-                  <CTA href="#games" label="Browse Games" />
-                  <CTA variant="ghost" href="/cart" label="Lihat Keranjang" />
-                </motion.div>
-
-                {/* Mini-stats strip */}
-                <motion.div
-                  className="mt-6 grid grid-cols-3 gap-2 text-center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.45, duration: 0.6 }}
-                >
-                  <Stat label="Keamanan" value="Manual Verify" />
-                  <Stat label="Metode" value="QRIS & Bank" />
-                  <Stat label="Kecepatan" value="Instan" />
-                </motion.div>
-              </div>
-
-              {/* Showcase card — berputar tiap 3.5 detik */}
-              <motion.div
-                className="relative rounded-xl border border-white/10 bg-[#0E1116] p-3"
-                initial={{ opacity: 0, scale: 0.98, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
-              >
-                <div className="aspect-[16/10] w-full overflow-hidden rounded-lg relative">
-                  {/* Fallback gradient bila belum ada gambar */}
-                  {!currentHero && (
-                    <div className="h-full w-full bg-gradient-to-br from-[#274056] to-[#30506a] flex items-center justify-center">
-                      <div className="text-center px-6">
-                        <div className="text-5xl md:text-6xl">🎮</div>
-                        <div className="mt-2 text-sm text-white/80">
-                          Deals harian, katalog terus bertambah.
+                  <div className="aspect-[16/10] w-full overflow-hidden rounded-lg relative">
+                    {!currentHero && (
+                      <div className="h-full w-full bg-gradient-to-br from-[#274056] to-[#30506a] flex items-center justify-center">
+                        <div className="text-center px-6">
+                          <div className="text-5xl md:text-6xl">🎮</div>
+                          <div className="mt-2 text-sm text-white/80">
+                            Deals harian, katalog terus bertambah.
+                          </div>
                         </div>
                       </div>
+                    )}
+                    <AnimatePresence mode="wait">
+                      {currentHero && (
+                        <motion.img
+                          key={currentHero}
+                          src={currentHero}
+                          alt="Showcase"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          initial={{ opacity: 0.0, scale: 1.01 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0.0, scale: 1.01 }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          loading="eager"
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className="absolute -top-3 -right-3 rounded-md bg-[#274056] px-2 py-1 text-xs">
+                    Hot Today
+                  </div>
+                  {heroImgs.length > 1 && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
+                      {heroImgs.slice(0, 8).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 w-3 rounded-full transition-all ${
+                            i === heroIdx ? "bg-white/90 w-5" : "bg-white/40"
+                          }`}
+                        />
+                      ))}
                     </div>
                   )}
-
-                  {/* Cross-fade image slideshow */}
-                  <AnimatePresence mode="wait">
-                    {currentHero && (
-                      <motion.img
-                        key={currentHero}
-                        src={currentHero}
-                        alt="Showcase"
-                        className="absolute inset-0 h-full w-full object-cover"
-                        initial={{ opacity: 0.0, scale: 1.01 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0.0, scale: 1.01 }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                        loading="eager"
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <div className="absolute -top-3 -right-3 rounded-md bg-[#274056] px-2 py-1 text-xs">
-                  Hot Today
-                </div>
-
-                {/* Dots indicator (opsional) */}
-                {heroImgs.length > 1 && (
-                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1">
-                    {heroImgs.slice(0, 8).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`h-1.5 w-3 rounded-full transition-all ${
-                          i === heroIdx ? "bg-white/90 w-5" : "bg-white/40"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* Games Section */}
       <section id="games" className="p-6 mt-6 mx-6 rounded-2xl bg-[#152030] border border-white/10">
@@ -237,13 +232,11 @@ export default function HomePage() {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
-              })}{" "}
-              WIB
+              })} WIB
             </motion.div>
           )}
         </div>
 
-        {/* Loading Skeleton */}
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -252,7 +245,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Hasil */}
         {!loading && (
           <AnimatePresence mode="popLayout">
             {games.length === 0 ? (
@@ -288,7 +280,6 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Footer */}
       <footer className="mx-6 mt-6 mb-10">
         <div className="rounded-2xl bg-[#152030] border border-white/10 p-5 text-center text-white/70">
           © {new Date().getFullYear()} KianaStore Key — Made for gamers in Indonesia.

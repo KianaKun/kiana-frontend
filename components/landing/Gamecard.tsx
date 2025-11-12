@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { resolveImg } from "@/components/Api";
+import { resolveImg } from "@/components/admin-dashboard/Api";
 
 export type Game = {
   gameID: number;
@@ -9,6 +9,7 @@ export type Game = {
   image_url?: string | null;
   description?: string | null;
   price?: number | null;
+  stock?: number;
 };
 
 export default function GameCard({ game }: { game: Game }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import ImageServer from "@/components/ui/ImageServer";
+import ImageServer from "@/components/imageserver/ImageServer";
 
 export type GameFormValues = {
   title: string;

@@ -1,6 +1,6 @@
-// app/layout.tsx
 import "./globals.css";
 import { Suspense } from "react";
+import ClientLayout from "@/components/clientlayout/clientlayout";
 
 export const metadata = {
   title: "KianaStore Key",
@@ -10,9 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body>
+      <body className="bg-[#0E1116] text-white">
         <Suspense fallback={null}>
-        {children}
+          <ClientLayout>{children}</ClientLayout>
         </Suspense>
       </body>
     </html>

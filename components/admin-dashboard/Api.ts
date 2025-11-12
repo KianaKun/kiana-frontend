@@ -25,12 +25,6 @@ export async function fetchJSON(url: string, init: RequestInit = {}) {
   return res.json();
 }
 
-/**
- * Normalisasi path gambar dari Backend:
- * - null/undefined -> placeholder
- * - http(s)        -> langsung
- * - /uploads/...   -> prefix via /api (agar konsisten & CORS aman)
- */
 export function resolveImg(src?: string | null) {
   if (!src) return "/placeholder.png";
   if (/^https?:\/\//i.test(src)) return src;

@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import type { Game } from "./types";
-import ImageServer from "@/components/ui/ImageServer";
+import ImageServer from "@/components/imageserver/ImageServer";
 
 type Props = {
   games: Game[];

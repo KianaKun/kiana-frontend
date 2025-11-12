@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AdminRoute from "@/components/AdminRoute";
-import AdminShell from "@/components/AdminShell";
-import Navbar from "@/ui/Navbar";
-import { API, fetchJSON } from "@/components/Api";
-import ConfirmDialog from "@/components/ConfirmDialog";
+import AdminRoute from "@/components/admin-dashboard/AdminRoute";
+import AdminShell from "@/components/admin-dashboard/AdminShell";
+import { API, fetchJSON } from "@/components/admin-dashboard/Api";
+import ConfirmDialog from "@/components/admin-dashboard/ConfirmDialog";
 import GameForm, { type GameFormValues } from "@/components/games/GameForm";
 import GamePicker from "@/components/games/GamePicker";
 import GameCardsPreview from "@/components/games/GameCardsPreview";
@@ -174,10 +173,7 @@ export default function ManageGamesPage() {
 
   return (
     <AdminRoute>
-      {/* Layout vertikal: Navbar di atas, AdminShell di bawah */}
       <div className="flex flex-col min-h-screen bg-[#0E1116]">
-        {/* Navbar tetap di atas */}
-        <Navbar />
         {/* Sidebar + Main Content */}
         <AdminShell>
           {/* Header */}
@@ -310,11 +306,20 @@ export default function ManageGamesPage() {
                     </div>
                   </motion.div>
                 )}
-
+                
                 {/* Preview */}
-                <div className="mt-4">
-                  <GameCardsPreview games={previewGames} />
-                </div>
+                {mode === "idle" && (
+                  <motion.div
+                    key="preview"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="mt-4"
+                  >
+                    <GameCardsPreview games={previewGames} />
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

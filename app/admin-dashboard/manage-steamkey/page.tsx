@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import AdminRoute from "@/components/AdminRoute";
-import AdminShell from "@/components/AdminShell";
-import Navbar from "@/ui/Navbar";
-import { API, fetchJSON, resolveImg } from "@/components/Api";
-import ImageServer from "@/components/ui/ImageServer";
 import { AnimatePresence, motion } from "framer-motion";
+import AdminRoute from "@/components/admin-dashboard/AdminRoute";
+import AdminShell from "@/components/admin-dashboard/AdminShell";
+import { API, fetchJSON } from "@/components/admin-dashboard/Api";
+import GameKeyCard from "@/components/admin-steamkey/gamekeycard";
+import ConfirmToast from "@/components/admin-steamkey/confirmtoast";
+import InfoToast from "@/components/admin-steamkey/infotoast";
+
 
 type Game = {
   gameID: number;
   title: string;
   image_url?: string | null;
-  is_deleted?: 0 | 1; // ⬅️ penting untuk guard FE
+  is_deleted?: 0 | 1;
 };
 
 type SteamKey = {
@@ -20,7 +22,6 @@ type SteamKey = {
   gameID: number;
   key_code: string;
   status: "available" | "sold" | "used" | string;
-  title?: string;
 };
 
 type PendingAction =
@@ -32,23 +33,19 @@ export default function ManageSteamkeyPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [keys, setKeys] = useState<SteamKey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ gameID: 0, key_code: "" });
 
-  const [form, setForm] = useState<{ gameID: number; key_code: string }>({
-    gameID: 0,
-    key_code: "",
-  });
-
-  const [infoToast, setInfoToast] = useState<{ open: boolean; text: string; type: "ok" | "err" }>({
-    open: false,
-    text: "",
-    type: "ok",
-  });
-  const [confirmToast, setConfirmToast] = useState<{ open: boolean; title: string; desc: string }>({
+  const [pending, setPending] = useState<PendingAction>({ kind: "none" });
+  const [confirmToast, setConfirmToast] = useState({
     open: false,
     title: "",
     desc: "",
   });
-  const [pending, setPending] = useState<PendingAction>({ kind: "none" });
+  const [infoToast, setInfoToast] = useState({
+    open: false,
+    text: "",
+    type: "ok" as "ok" | "err",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const SK_API = `${API}/admin/manage-steamkey`;
@@ -56,26 +53,22 @@ export default function ManageSteamkeyPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [gamesData, keysData] = await Promise.all([
-        // ⬇️ ambil hanya game aktif dari backend
+      const [gamesRes, keysRes] = await Promise.all([
         fetchJSON(`${API}/admin/games?active=1`, { credentials: "include" }),
         fetchJSON(SK_API, { credentials: "include" }).catch(() => ({ items: [] })),
       ]);
 
-      // ⬇️ guard FE kalau backend keliru/legacy
-      const rawGames: Game[] = (gamesData.items || gamesData || []) as Game[];
+      const rawGames = (gamesRes.items || gamesRes) as Game[];
       const activeGames = rawGames.filter((g) => (g?.is_deleted ?? 0) === 0);
       setGames(activeGames);
 
-      // ⬇️ hanya stok available
-      const allKeys: SteamKey[] = (keysData.items || keysData || []).filter(
+      const availableKeys = (keysRes.items || keysRes || []).filter(
         (k: SteamKey) => String(k.status).toLowerCase() === "available"
       );
-      setKeys(allKeys);
+      setKeys(availableKeys);
 
-      // jika game ter-archive saat ini, reset pilihan
       if (form.gameID && !activeGames.some((g) => g.gameID === form.gameID)) {
-        setForm((f) => ({ ...f, gameID: 0 }));
+        setForm({ gameID: 0, key_code: "" });
       }
     } finally {
       setLoading(false);
@@ -84,26 +77,20 @@ export default function ManageSteamkeyPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Set ID game aktif, untuk menyaring keys orphan/nggak valid
-  const activeIds = useMemo(() => new Set(games.map((g) => g.gameID)), [games]);
-
-  // Grouping keys per game (hanya untuk game aktif)
   const grouped = useMemo(() => {
     const map = new Map<number, SteamKey[]>();
     for (const k of keys) {
-      if (!activeIds.has(k.gameID)) continue; // ⬅️ cegah munculnya game yg sudah di-archive
       const arr = map.get(k.gameID) || [];
       arr.push(k);
       map.set(k.gameID, arr);
     }
     return map;
-  }, [keys, activeIds]);
+  }, [keys]);
 
   const gamesWithStock = useMemo(
-    () => games.filter((g) => (grouped.get(g.gameID)?.length || 0) > 0),
+    () => games.filter((g) => (grouped.get(g.gameID)?.length ?? 0) > 0),
     [games, grouped]
   );
 
@@ -112,7 +99,7 @@ export default function ManageSteamkeyPage() {
     setConfirmToast({
       open: true,
       title: "Yakin submit steamkey?",
-      desc: "Ini tidak akan bisa dihapus lagi nanti.",
+      desc: "Setelah disimpan, key tidak bisa dihapus.",
     });
   };
 
@@ -121,7 +108,9 @@ export default function ManageSteamkeyPage() {
     setSubmitting(true);
     try {
       const { gameID, key_code } =
-        pending.kind === "global-add" || pending.kind === "quick-add" ? pending : { gameID: 0, key_code: "" };
+        pending.kind === "global-add" || pending.kind === "quick-add"
+          ? pending
+          : { gameID: 0, key_code: "" };
 
       await fetchJSON(SK_API, {
         method: "POST",
@@ -133,11 +122,11 @@ export default function ManageSteamkeyPage() {
         }),
       });
 
-      setInfoToast({ open: true, text: "✅ Key submitted", type: "ok" });
+      setInfoToast({ open: true, text: "✅ Key berhasil disimpan", type: "ok" });
       if (pending.kind === "global-add") setForm({ gameID: 0, key_code: "" });
       await load();
     } catch (e: any) {
-      setInfoToast({ open: true, text: `❌ ${e?.message || "Failed to submit key"}`, type: "err" });
+      setInfoToast({ open: true, text: `❌ ${e?.message || "Gagal menyimpan key"}`, type: "err" });
     } finally {
       setSubmitting(false);
       setConfirmToast((c) => ({ ...c, open: false }));
@@ -147,15 +136,12 @@ export default function ManageSteamkeyPage() {
 
   return (
     <AdminRoute>
-      <Navbar />
       <AdminShell>
-        {/* Header + Global Add */}
+        {/* Header */}
         <div className="bg-[#152030] p-4 rounded-md border border-white/10">
           <h2 className="mb-1 font-medium">Manage Steam Keys</h2>
           <p className="text-xs text-white/60 mb-4">
-            Hanya menampilkan stok <span className="font-semibold">available</span>. Keys yang sudah{" "}
-            <span className="font-semibold">used/sold</span> tidak ditampilkan. <br className="hidden sm:block" />
-            Setelah disubmit, key <span className="font-semibold">tidak bisa dihapus</span>.
+            Hanya stok <b>available</b> yang ditampilkan. Setelah disubmit, key tidak bisa dihapus.
           </p>
 
           <div className="grid md:grid-cols-3 gap-3">
@@ -189,68 +175,143 @@ export default function ManageSteamkeyPage() {
             <button
               onClick={() => {
                 if (!form.gameID || !form.key_code.trim()) return;
-                askConfirm({ kind: "global-add", gameID: Number(form.gameID), key_code: form.key_code });
+                askConfirm({ kind: "global-add", gameID: form.gameID, key_code: form.key_code });
               }}
+              disabled={!form.gameID || !form.key_code.trim()}
               className={`px-4 py-2 rounded font-semibold ${
                 !form.gameID || !form.key_code.trim()
                   ? "bg-[#274056]/50 cursor-not-allowed"
                   : "bg-[#274056] hover:bg-[#30506a]"
               }`}
-              disabled={!form.gameID || !form.key_code.trim()}
             >
               Save
             </button>
           </div>
         </div>
 
-        {/* Cards per Game */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {/* Game Cards */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#152030] border border-white/10 rounded-lg p-4 animate-pulse">
+              <div
+                key={i}
+                className="bg-[#152030] border border-white/10 rounded-lg p-4 animate-pulse"
+              >
                 <div className="h-36 rounded bg-white/10" />
                 <div className="h-4 bg-white/10 rounded mt-3 w-2/3" />
                 <div className="h-3 bg-white/10 rounded mt-2 w-1/2" />
               </div>
             ))
           ) : (
-            gamesWithStock.map((g) => (
-              <GameKeyCard
-                key={g.gameID}
-                game={g}
-                keys={grouped.get(g.gameID)!}
-                onQuickAdd={(keyCode, done) => {
-                  askConfirm({
-                    kind: "quick-add",
-                    gameID: g.gameID,
-                    key_code: keyCode.trim(),
-                  });
-                  done?.();
-                }}
-              />
-            ))
-          )}
+            <AnimatePresence mode="sync">
+              {(() => {
+                // kalau user pilih game tertentu
+                if (form.gameID) {
+                  const selectedGame = games.find((g) => g.gameID === form.gameID);
+                  const selectedKeys = grouped.get(form.gameID) || [];
 
-          {!loading && gamesWithStock.length === 0 && (
-            <div className="col-span-full rounded-lg border border-white/10 bg-[#152030] p-6 text-center text-white/70">
-              Belum ada stok <b>available</b>. Tambahkan key baru lewat form di atas atau quick-add per game.
-            </div>
+                  if (!selectedGame || selectedKeys.length === 0) {
+                    return (
+                      <motion.div
+                        key="empty-selected"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="col-span-full rounded-lg border border-white/10 bg-[#152030] p-6 text-center text-white/70"
+                      >
+                        Belum ada stok <b>available</b> untuk game ini.
+                      </motion.div>
+                    );
+                  }
+
+                  // kalau ada stok untuk game yang dipilih
+                  return (
+                    <motion.div
+                      key={selectedGame.gameID}
+                      layout
+                      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                    >
+                      <GameKeyCard
+                        game={selectedGame}
+                        keys={selectedKeys}
+                        onQuickAdd={(keyCode, done) => {
+                          askConfirm({
+                            kind: "quick-add",
+                            gameID: selectedGame.gameID,
+                            key_code: keyCode.trim(),
+                          });
+                          done?.();
+                        }}
+                      />
+                    </motion.div>
+                  );
+                }
+
+                // kalau user gak pilih apa-apa (form.gameID = 0)
+                const stockedGames = games.filter(
+                  (g) => (grouped.get(g.gameID)?.length ?? 0) > 0
+                );
+
+                if (stockedGames.length === 0) {
+                  return (
+                    <motion.div
+                      key="empty-all"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="col-span-full rounded-lg border border-white/10 bg-[#152030] p-6 text-center text-white/70"
+                    >
+                      Belum ada stok <b>available</b>. Tambahkan key baru lewat form di atas atau quick-add per game.
+                    </motion.div>
+                  );
+                }
+
+                // tampilkan semua game dengan stok
+                return stockedGames.map((g) => (
+                  <motion.div
+                    key={g.gameID}
+                    layout
+                    initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                  >
+                    <GameKeyCard
+                      game={g}
+                      keys={grouped.get(g.gameID)!}
+                      onQuickAdd={(keyCode, done) => {
+                        askConfirm({
+                          kind: "quick-add",
+                          gameID: g.gameID,
+                          key_code: keyCode.trim(),
+                        });
+                        done?.();
+                      }}
+                    />
+                  </motion.div>
+                ));
+              })()}
+            </AnimatePresence>
           )}
         </div>
 
+
+        {/* Toast Components */}
         <ConfirmToast
           open={confirmToast.open}
           title={confirmToast.title}
           desc={confirmToast.desc}
-          onCancel={() => {
-            if (submitting) return;
-            setConfirmToast((c) => ({ ...c, open: false }));
-            setPending({ kind: "none" });
-          }}
-          onConfirm={() => {
-            if (!submitting) doSubmit();
-          }}
           loading={submitting}
+          onCancel={() => {
+            if (!submitting) {
+              setConfirmToast((c) => ({ ...c, open: false }));
+              setPending({ kind: "none" });
+            }
+          }}
+          onConfirm={() => !submitting && doSubmit()}
         />
 
         <InfoToast
@@ -261,178 +322,5 @@ export default function ManageSteamkeyPage() {
         />
       </AdminShell>
     </AdminRoute>
-  );
-}
-
-/* --------- Card per Game ---------- */
-function GameKeyCard({
-  game,
-  keys,
-  onQuickAdd,
-}: {
-  game: Game;
-  keys: SteamKey[];
-  onQuickAdd: (keyCode: string, done?: () => void) => void;
-}) {
-  const [keyInput, setKeyInput] = useState("");
-
-  const submitQuick = () => {
-    if (!keyInput.trim()) return;
-    onQuickAdd(keyInput, () => setKeyInput(""));
-  };
-
-  return (
-    <div className="rounded-lg border border-white/10 bg-[#152030] overflow-hidden flex flex-col">
-      <div className="relative h-40 w-full overflow-hidden">
-        <ImageServer src={resolveImg(game.image_url)} alt={game.title} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#152030] via-transparent to-transparent" />
-      </div>
-
-      <div className="p-4 flex-1 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-semibold truncate">{game.title}</div>
-          <div className="text-xs bg-[#0E1116] rounded-full px-2 py-1">{keys.length} available</div>
-        </div>
-
-        <div className="space-y-2 max-h-40 overflow-auto pr-1">
-          {keys.map((k) => (
-            <div key={k.SteamkeyID} className="flex items-center gap-2 bg-[#0E1116] rounded-md px-3 py-2">
-              <code className="font-mono text-sm truncate">{k.key_code}</code>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-1 flex gap-2">
-          <input
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="Add new key (XXXXX-XXXXX-XXXXX)"
-            className="flex-1 px-3 py-2 bg-[#0E1116] rounded text-sm"
-          />
-          <button
-            onClick={submitQuick}
-            className={`px-3 py-2 rounded text-sm ${
-              keyInput.trim() ? "bg-[#274056] hover:bg-[#30506a]" : "bg-[#274056]/50 cursor-not-allowed"
-            }`}
-            disabled={!keyInput.trim()}
-          >
-            Add
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* --------- Confirm Toast ---------- */
-function ConfirmToast({
-  open,
-  title,
-  desc,
-  onCancel,
-  onConfirm,
-  loading,
-}: {
-  open: boolean;
-  title: string;
-  desc?: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-  loading?: boolean;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[60] flex items-end justify-center px-4 py-6 sm:items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-          <motion.div
-            className="relative w-full max-w-md rounded-xl border border-amber-400/20 bg-[#2b1f0e] text-amber-100 shadow-2xl p-4"
-            initial={{ y: 24, opacity: 0, scale: 0.98 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 12, opacity: 0, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 380, damping: 26 }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="mt-1 h-7 w-7 rounded-full bg-amber-500 text-black grid place-items-center font-bold">
-                !
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold">{title}</div>
-                {desc && <div className="text-sm opacity-90 mt-1">{desc}</div>}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={onCancel}
-                    disabled={loading}
-                    className="px-4 py-2 rounded bg-[#0E1116] hover:bg-[#161c23] disabled:opacity-50"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={onConfirm}
-                    disabled={loading}
-                    className="px-4 py-2 rounded bg-amber-500 text-black font-semibold hover:bg-amber-400 disabled:opacity-50"
-                  >
-                    {loading ? "Submitting…" : "Ya, Submit"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-/* --------- Info Toast ---------- */
-function InfoToast({
-  open,
-  text,
-  type,
-  onClose,
-}: {
-  open: boolean;
-  text: string;
-  type: "ok" | "err";
-  onClose: () => void;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="info-toast"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70]"
-          initial={{ opacity: 0, y: 18, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 18, scale: 0.98 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-        >
-          <div
-            className={`flex items-center gap-3 rounded-full border px-4 py-2 shadow-xl ${
-              type === "ok"
-                ? "bg-[#12202f]/95 border-emerald-500/30 text-emerald-200"
-                : "bg-[#2b1720]/95 border-rose-500/30 text-rose-200"
-            }`}
-          >
-            <span
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
-                type === "ok" ? "bg-emerald-500" : "bg-rose-500"
-              }`}
-            >
-              {type === "ok" ? "✓" : "!"}
-            </span>
-            <span className="font-medium">{text}</span>
-            <button className="ml-2 text-xs underline opacity-80 hover:opacity-100" onClick={onClose}>
-              Tutup
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

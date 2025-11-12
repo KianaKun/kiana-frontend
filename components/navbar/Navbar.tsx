@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { fetchJSON } from "@/components/Api";
+import { fetchJSON } from "@/components/admin-dashboard/Api";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X, LogOut } from "lucide-react";
 
@@ -32,7 +32,6 @@ export default function Navbar() {
     toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, open: false })), delayClose);
   };
 
-  // sync search state
   const [q, setQ] = useState(searchParams.get("q") ?? "");
   useEffect(() => {
     setQ(searchParams.get("q") ?? "");
@@ -60,7 +59,6 @@ export default function Navbar() {
     return () => window.removeEventListener("focus", recheck);
   }, [recheck]);
 
-  // debounce push ?q=
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeQ = (val: string) => {
     setQ(val);
@@ -99,8 +97,8 @@ export default function Navbar() {
           <span className="font-bold text-sm sm:text-base">KianaStore Key</span>
         </div>
 
-        {/* Desktop Mid Search for normal user */}
-        {user && user.role === "user" && (
+        {/* Desktop Mid Search */}
+        {user?.role === "user" && (
           <div className="hidden sm:flex flex-1 justify-center px-6">
             <input
               type="text"
@@ -119,7 +117,7 @@ export default function Navbar() {
         )}
 
         {/* Desktop Right Buttons */}
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2 text-white">
           {!user && (
             <>
               <Link href="/register" className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
@@ -141,8 +139,7 @@ export default function Navbar() {
               </Link>
               <button
                 onClick={() => setShowConfirm(true)}
-                className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
-                title="Logout"
+                className="bg-red-600 text-white px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
               >
                 <LogOut size={18} />
                 Logout
@@ -151,16 +148,13 @@ export default function Navbar() {
           )}
 
           {user?.role === "admin" && (
-            <>
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
-                title="Logout"
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
-            </>
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="bg-red-600 text-white px-4 py-2 rounded-sm hover:bg-red-700 flex items-center gap-2"
+            >
+              <LogOut size={18} />
+              Logout
+            </button>
           )}
         </div>
 
@@ -181,7 +175,7 @@ export default function Navbar() {
               exit={{ opacity: 0, y: -10 }}
               className="absolute top-full left-0 w-full bg-[#1B2A40] flex flex-col p-4 sm:hidden z-50"
             >
-              {/* Search if user normal */}
+              {/* Search */}
               {user?.role === "user" && (
                 <input
                   type="text"
@@ -199,22 +193,22 @@ export default function Navbar() {
                 />
               )}
 
-              {/* Menu for non-logged user */}
+              {/* Guest */}
               {!user && (
                 <>
-                  <Link href="/login" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Login
                   </Link>
-                  <Link href="/register" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm hover:bg-[#30506a]">
+                  <Link href="/register" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm hover:bg-[#30506a]">
                     Create account
                   </Link>
                 </>
               )}
 
-              {/* Menu for user */}
+              {/* User */}
               {user?.role === "user" && (
                 <>
-                  <Link href="/cart" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a] relative">
+                  <Link href="/cart" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a] relative">
                     Cart
                     {qty > 0 && (
                       <span className="absolute -top-2 -right-2 text-xs bg-white text-[#0E1116] rounded-full px-2">
@@ -227,26 +221,26 @@ export default function Navbar() {
                       setShowConfirm(true);
                       setMenuOpen(false);
                     }}
-                    className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
+                    className="bg-red-600 text-white font-medium px-4 py-2 rounded-sm hover:bg-red-700"
                   >
                     Logout
                   </button>
                 </>
               )}
 
-              {/* Menu for admin (Navigation + Logout) */}
+              {/* Admin */}
               {user?.role === "admin" && (
                 <>
-                  <Link href="/admin-dashboard" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                  <Link href="/admin-dashboard" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Dashboard
                   </Link>
-                  <Link href="/admin-dashboard/manage-games" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                  <Link href="/admin-dashboard/manage-games" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Manage Games
                   </Link>
-                  <Link href="/admin-dashboard/manage-steamkey" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                  <Link href="/admin-dashboard/manage-steamkey" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Manage Steamkey
                   </Link>
-                  <Link href="/admin-dashboard/manage-order" onClick={() => setMenuOpen(false)} className="bg-[#274056] px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
+                  <Link href="/admin-dashboard/manage-order" onClick={() => setMenuOpen(false)} className="bg-[#274056] text-white font-medium px-4 py-2 rounded-sm mb-2 hover:bg-[#30506a]">
                     Manage Order
                   </Link>
                   <button
@@ -254,7 +248,7 @@ export default function Navbar() {
                       setShowConfirm(true);
                       setMenuOpen(false);
                     }}
-                    className="bg-red-600 px-4 py-2 rounded-sm hover:bg-red-700"
+                    className="bg-red-600 text-white font-medium px-4 py-2 rounded-sm hover:bg-red-700"
                   >
                     Logout
                   </button>
@@ -305,9 +299,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-              toast.type === "ok"
-                ? "bg-emerald-600 text-white"
-                : "bg-red-600 text-white"
+              toast.type === "ok" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
             }`}
           >
             {toast.text}
