@@ -90,7 +90,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="flex items-center justify-between px-4 sm:px-6 py-3 bg-[#152030] relative z-50">
+      <nav className="fixed top-0 left-0 w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-[#152030] z-50 shadow-md">
         {/* Left: Logo */}
         <div className="flex items-center space-x-2 bg-[#0E1116] px-3 py-2 rounded-xl text-white">
           <span className="text-xl">🔑</span>
