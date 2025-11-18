@@ -48,8 +48,8 @@ export default function OrderSummaryPage() {
   }
 
   function contactWhatsApp() {
-    const message = encodeURIComponent(`Halo, saya ingin konfirmasi pesanan dengan Order ID: ${order.orderID}`);
-    window.open(`https://wa.me/6281234567890?text=${message}`, "_blank");
+    const message = encodeURIComponent(`Halo, saya ingin konfirmasi bahwa pesanan dengan Order ID: ${order.orderID} sudah saya Bayar, Mohon Dicheck`);
+    window.open(`https://wa.me/+6285156501407?text=${message}`, "_blank");
   }
 
   const payLogos: Record<string, string> = {
@@ -137,13 +137,13 @@ export default function OrderSummaryPage() {
             {order.payment_method === "BCA" && (
               <div className="mt-4 text-center">
                 <p>Transfer ke rekening BCA berikut:</p>
-                <p className="text-lg font-bold">1234567890 a.n. PT Kiana Store</p>
+                <p className="text-lg font-bold">5657010796 a.n. Hilman Azkia Gibran</p>
               </div>
             )}
             {order.payment_method === "SEABANK" && (
               <div className="mt-4 text-center">
                 <p>Transfer ke rekening SeaBank berikut:</p>
-                <p className="text-lg font-bold">9876543210 a.n. PT Kiana Store</p>
+                <p className="text-lg font-bold">901096390425 a.n. Hilman Azkia Gibran</p>
               </div>
             )}
 
