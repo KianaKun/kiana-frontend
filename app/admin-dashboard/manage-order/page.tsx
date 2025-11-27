@@ -23,11 +23,70 @@ type AssignedKey = {
 type Panel = { loading: boolean; items: AssignedKey[]; error?: string; hidden?: boolean };
 type Msg = { kind: "ok" | "err" | "warn"; text: string };
 
+function ConfirmModal({
+  open,
+  title,
+  message,
+  confirmText = "Yes",
+  cancelText = "Cancel",
+  loading = false,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/60"
+        onClick={onCancel}
+        aria-hidden
+      />
+
+      <div className="relative w-[95%] max-w-lg mx-auto">
+        <div className="bg-[#0B1220] border border-white/10 rounded-lg p-5 shadow-lg">
+          <h3 className="text-lg font-semibold mb-2">{title}</h3>
+          <p className="text-sm text-white/80 mb-4">{message}</p>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded bg-white/5 hover:bg-white/10"
+              disabled={loading}
+            >
+              {cancelText}
+            </button>
+            <button
+              onClick={onConfirm}
+              className="px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ManageOrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [msg, setMsg] = useState<Msg | null>(null);
   const [panel, setPanel] = useState<Record<number, Panel>>({});
-  const [confirmData, setConfirmData] = useState<{ id: number; action: "approved" | "rejected" } | null>(null);
+  const [confirmData, setConfirmData] = useState<{
+    id: number;
+    action: "approved" | "rejected";
+    loading?: boolean;
+  } | null>(null);
   const [search, setSearch] = useState(""); // 🔍 search bar
 
   const load = () =>
@@ -35,7 +94,9 @@ export default function ManageOrderPage() {
       .then((d) => setOrders(d.items || d))
       .catch((e: any) => setMsg({ kind: "err", text: e.message }));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const filteredOrders = orders.filter((o) => {
     const q = search.trim().toLowerCase();
@@ -47,6 +108,9 @@ export default function ManageOrderPage() {
 
   const doAction = async (orderID: number, status: "approved" | "rejected") => {
     try {
+      // set loading for confirm modal (so button shows processing)
+      setConfirmData((c) => (c && c.id === orderID && c.action === status ? { ...c, loading: true } : c));
+
       const res = await fetch(`${API}/admin/orders/${orderID}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -57,6 +121,7 @@ export default function ManageOrderPage() {
       if (res.status === 409) {
         const j = await res.json();
         setMsg({ kind: "warn", text: j.message || "Stock kurang" });
+        setConfirmData(null);
         return;
       }
       if (!res.ok) throw new Error((await res.json()).message || "Gagal update");
@@ -64,14 +129,14 @@ export default function ManageOrderPage() {
       setOrders((prev) =>
         status === "rejected"
           ? prev.filter((o) => o.orderID !== orderID)
-          : prev.map((o) =>
-              o.orderID === orderID ? { ...o, status } : o
-            )
+          : prev.map((o) => (o.orderID === orderID ? { ...o, status } : o))
       );
 
       setMsg({ kind: "ok", text: "Berhasil" });
+      setConfirmData(null);
     } catch (e: any) {
       setMsg({ kind: "err", text: e.message });
+      setConfirmData(null);
     }
   };
 
@@ -91,12 +156,22 @@ export default function ManageOrderPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full sm:w-80 px-4 py-2 rounded bg-[#0E1116] text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button
-                onClick={load}
-                className="px-4 py-2 rounded bg-blue-700 hover:bg-blue-600 text-white"
-              >
-                Refresh
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={load}
+                  className="px-4 py-2 rounded bg-blue-700 hover:bg-blue-600 text-white"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                  }}
+                  className="px-4 py-2 rounded bg-white/5 hover:bg-white/10 text-white"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
 
             {msg && (
@@ -149,13 +224,17 @@ export default function ManageOrderPage() {
                           <div className="flex gap-2">
                             <button
                               className="px-3 py-2 rounded bg-green-700 hover:bg-green-600"
-                              onClick={() => doAction(o.orderID, "approved")}
+                              onClick={() =>
+                                setConfirmData({ id: o.orderID, action: "approved" })
+                              }
                             >
                               Approve
                             </button>
                             <button
                               className="px-3 py-2 rounded bg-red-700 hover:bg-red-600"
-                              onClick={() => doAction(o.orderID, "rejected")}
+                              onClick={() =>
+                                setConfirmData({ id: o.orderID, action: "rejected" })
+                              }
                             >
                               Reject
                             </button>
@@ -179,6 +258,26 @@ export default function ManageOrderPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Confirm Modal */}
+          <ConfirmModal
+            open={!!confirmData}
+            title={
+              confirmData?.action === "rejected" ? "Konfirmasi Penolakan" : "Konfirmasi Approve"
+            }
+            message={
+              confirmData?.action === "rejected"
+                ? "Apakah Anda yakin ingin menolak order ini? Tindakan ini akan menghapus order dari daftar."
+                : "Apakah Anda yakin ingin menyetujui order ini?"
+            }
+            confirmText={confirmData?.action === "rejected" ? "Reject" : "Approve"}
+            loading={!!confirmData?.loading}
+            onCancel={() => setConfirmData(null)}
+            onConfirm={() => {
+              if (!confirmData) return;
+              doAction(confirmData.id, confirmData.action);
+            }}
+          />
         </div>
       </AdminShell>
     </AdminRoute>
