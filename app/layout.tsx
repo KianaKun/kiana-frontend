@@ -4,7 +4,7 @@ import ClientLayout from "@/components/clientlayout/clientlayout";
 
 export const metadata = {
   title: "KianaStore Key",
-  description: "For Those Who Come After",
+  icon: "/favicon.ico",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
