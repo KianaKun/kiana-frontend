@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation"; // 🔹 NEW
 import { motion, AnimatePresence } from "framer-motion";
 
 import CTA from "@/components/landing/CTA";
@@ -24,6 +24,32 @@ export default function HomePage() {
 
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
+
+  const router = useRouter(); // 🔹 NEW
+
+  // 🔹 NEW: kalau sudah login sebagai admin, paksa ke /admin-dashboard
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await fetchJSON("/me"); // sama seperti fetch /games & /images
+        if (cancelled) return;
+
+        if (data?.user?.role === "admin") {
+          // Bisa pakai router.replace supaya tidak bisa back ke landing
+          router.replace("/admin-dashboard");
+        }
+      } catch (err) {
+        // silent fail, biarkan user tetap di landing kalau cek /me gagal
+        console.error("Failed to check /me", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   // ===== Fetch games + filter stok kosong =====
   useEffect(() => {
@@ -280,11 +306,71 @@ export default function HomePage() {
         )}
       </section>
 
-      <footer className="mx-6 mt-6 mb-10">
-        <div className="rounded-2xl bg-[#152030] border border-white/10 p-5 text-center text-white/70">
-          © {new Date().getFullYear()} KianaStore Key — Made for gamers in Indonesia.
+      <footer className="mx-6 mt-10 mb-10">
+        <div className="rounded-2xl bg-[#152030] border border-white/10 p-6 md:p-7">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            
+            {/* Brand + legal */}
+            <div className="text-center md:text-left text-sm text-white/70 space-y-1">
+              <p className="font-medium text-white">
+                KianaStore Key — Made for gamers in Indonesia.
+              </p>
+              <p>© {new Date().getFullYear()} KianaStore Key. All rights reserved.</p>
+              <p className="text-xs text-white/50 max-w-md mx-auto md:mx-0">
+                Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation.
+              </p>
+            </div>
+
+            {/* Social + Contact */}
+            <div className="flex flex-col items-center md:items-end gap-3">
+              
+              {/* Buttons social */}
+              <div className="flex flex-wrap justify-center md:justify-end gap-2">
+                <a
+                  href="#"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 transition text-xs"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src="https://cdn.simpleicons.org/instagram/ffffff" className="w-3 h-3" />
+                  Instagram
+                </a>
+                <a
+                  href="#"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 transition text-xs"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src="https://cdn.simpleicons.org/discord/ffffff" className="w-3 h-3" />
+                  Discord
+                </a>
+                <a
+                  href="#"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 transition text-xs"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src="https://cdn.simpleicons.org/twitter/ffffff" className="w-3 h-3" />
+                  X (Twitter)
+                </a>
+              </div>
+
+              {/* Contact Support Button */}
+              <a
+                href="mailto:kianashop02@gmail.com"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 transition text-xs font-medium"
+              >
+                <img
+                  src="https://cdn.simpleicons.org/gmail/ffffff"
+                  className="w-4 h-4"
+                />
+                Contact Support
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
+
     </div>
   );
 }

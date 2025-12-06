@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchJSON, resolveImg } from "@/components/admin-dashboard/Api";
 import { motion, AnimatePresence } from "framer-motion";
 
+
 /* ===== Helper Rupiah aman untuk string/number ===== */
 function toIDR(v: unknown) {
   const n =
@@ -36,6 +37,15 @@ export default function ProductPage() {
   const [addedToast, setAddedToast] = useState(false);
   const [buying, setBuying] = useState(false);
   const [buyErr, setBuyErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+  }, [id, router]);
 
   useEffect(() => {
     if (!id) return;
@@ -144,7 +154,8 @@ export default function ProductPage() {
         )}
       </AnimatePresence>
 
-      <main className="p-6 mt-4 mx-6 rounded-2xl bg-[#152030] border border-white/10">
+      <main className="p-6 mt-10 mx-6 rounded-2xl bg-[#152030] border border-white/10">
+
         {/* breadcrumb mini */}
         <div className="mb-4 flex items-center justify-between">
           <button
@@ -172,12 +183,12 @@ export default function ProductPage() {
 
         {/* Content */}
         {!loading && game && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex flex-col md:flex-row gap-8 max-w-[2000px] mx-auto items-start"
-          >
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="flex flex-col md:flex-row gap-8 items-start"
+            >
             {/* Left: Game Image */}
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
